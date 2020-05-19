@@ -1,20 +1,19 @@
 import pygame
 import random
 from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, SOLVE_BUTTON_HEIGHT, SOLVE_BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, BACKGROUND_COLOUR
+from solver import solver, get_adjacent
 
 def main():
     nrow = 10
-    ncol = 14
-    number_of_bombs = 30
+    ncol = 10
+    number_of_bombs = 20
     screen_width = ncol * SPACE_SIDE_LENGTH + 2 * MARGIN
     screen_height = nrow * SPACE_SIDE_LENGTH + 2 * MARGIN + SOLVE_BUTTON_HEIGHT + BUTTON_FIELD_MARGIN
     
     pygame.init() 
     global gameDisplay 
-    global clock
     gameDisplay = pygame.display.set_mode((screen_width, screen_height))
     gameDisplay.fill(BACKGROUND_COLOUR)
-    clock = pygame.time.Clock()
     pygame.display.set_caption("Minesweeper")
     
     f = Field(ncol, nrow, (MARGIN, MARGIN), number_of_bombs)
@@ -24,13 +23,16 @@ def main():
     button_display_y = MARGIN + nrow * SPACE_SIDE_LENGTH + BUTTON_FIELD_MARGIN
     gameDisplay.blit(button, (button_display_x, button_display_y))
     pygame.display.update()
+    mode = "play"
 
-    while True:
+    while mode == "play":
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            elif event.type == pygame.MOUSEBUTTONUP and f.exploded == False:
+            if f.exploded or f.won:
+                mode = "exit"
+            elif event.type == pygame.MOUSEBUTTONUP and f.exploded == False and f.won == False:
                 mouse_position = pygame.mouse.get_pos()
                 if mouse_position[0] >= f.position[0] and mouse_position[0] < f.position[0] + f.width and mouse_position[1] >= f.position[1] and mouse_position[1] < f.position[1] + f.height:
                     x = mouse_position[0] - f.position[0]
@@ -40,13 +42,15 @@ def main():
                     if event.button == 1:
                         f.open(space_position_x, space_position_y)
                     elif event.button == 3:
-                        f.flag(space_position_x, space_position_y)
+                        f.flag(space_position_x, space_position_y, False)
                 elif mouse_position[0] >= button_display_x and mouse_position[0] < button_display_x + SOLVE_BUTTON_WIDTH and mouse_position[1] >= button_display_y and mouse_position[1] < button_display_y + SOLVE_BUTTON_HEIGHT:
-                    print("solve")
-        clock.tick(60)
-    
+                    solver(f)
+        pygame.time.wait(60)
+        
+    pygame.quit()
+    quit() 
+
 class Field:
-    array_of_spaces = [[]]
     def __init__(self, num_col, num_row, position, num_bombs):
         self.position = position
         self.num_bombs = num_bombs
@@ -57,7 +61,32 @@ class Field:
         self.num_col = num_col
         self.array_of_spaces = [[Space(False, x, y, self) for y in range(self.num_row)] for x in range(self.num_col)]
         self.exploded = False
+        self.won = False
         self.bombs_set = False
+
+    def get_started(self):
+        return self.bombs_set
+    
+    def get_num_bombs(self):
+        return self.num_bombs
+    
+    def get_num_row(self):
+        return self.num_row
+    
+    def get_num_col(self):
+        return self.num_col
+
+    def get_clues(self):
+        clues = []
+        opened = []
+        for x, col in enumerate(self.array_of_spaces):
+            for y, space in enumerate(col):
+                if space.opened:
+                    num_bombs = space.get_number()
+                    opened.append((x, y))
+                    if num_bombs != 0:
+                        clues.append((x, y, num_bombs))
+        return clues, opened
 
     def open(self, position_x, position_y):
         if self.bombs_set == False:
@@ -65,9 +94,24 @@ class Field:
             self.plant_bombs(position_x, position_y)
             
         self.array_of_spaces[position_x][position_y].open()
+        #TODO: add winning sequence
+        if self.exploded == True:
+            print("exploded")
+        if self.num_bombs == self.get_unopened():
+            self.won = True
+            print("win")
+        return
+
+    def get_unopened(self):
+        num = 0
+        for col in self.array_of_spaces:
+            for space in col:
+                if space.opened == False:
+                    num = num + 1
+        return num
     
-    def flag(self, position_x, position_y):
-        self.array_of_spaces[position_x][position_y].flag()
+    def flag(self, position_x, position_y, keep):
+        self.array_of_spaces[position_x][position_y].flag(keep)
 
     def plant_bombs(self, position_x, position_y):    
         rand_list = []
@@ -88,67 +132,8 @@ class Field:
             self.array_of_spaces[x][y].has_mine = True
         return
 
-def get_adjacent(position_x, position_y, num_col, num_row):
-    check = []
-    if position_x == 0:
-        if position_y == 0:
-            check.append((0, 1))
-            check.append((1, 1))
-            check.append((1, 0))
-        elif position_y == num_row - 1:
-            check.append((position_x, position_y-1))
-            check.append((position_x+1, position_y-1))
-            check.append((position_x+1, position_y))
-        else:
-            check.append((position_x, position_y-1))
-            check.append((position_x, position_y+1))
-            check.append((position_x+1, position_y-1))
-            check.append((position_x+1, position_y))
-            check.append((position_x+1, position_y+1))
-    elif position_x == num_col - 1:
-        if position_y == 0:
-            check.append((position_x, 1))
-            check.append((position_x-1, 0))
-            check.append((position_x-1, 1))
-        elif position_y == num_row - 1:
-            check.append((position_x-1, position_y))
-            check.append((position_x-1, position_y-1))
-            check.append((position_x, position_y-1))
-        else:
-            check.append((position_x, position_y-1))
-            check.append((position_x, position_y+1))
-            check.append((position_x-1, position_y-1))
-            check.append((position_x-1, position_y))
-            check.append((position_x-1, position_y+1))
-    elif position_y == 0:
-        check.append((position_x-1, position_y))
-        check.append((position_x+1, position_y))
-        check.append((position_x-1, position_y+1))
-        check.append((position_x, position_y+1))
-        check.append((position_x+1, position_y+1))
-    elif position_y == num_row - 1:
-        check.append((position_x-1, position_y))
-        check.append((position_x+1, position_y))
-        check.append((position_x-1, position_y-1))
-        check.append((position_x, position_y-1))
-        check.append((position_x+1, position_y-1))
-    else: 
-        check.append((position_x-1, position_y-1))
-        check.append((position_x-1, position_y))
-        check.append((position_x-1, position_y+1))
-        check.append((position_x, position_y-1))
-        check.append((position_x, position_y+1))
-        check.append((position_x+1, position_y-1))
-        check.append((position_x+1, position_y))
-        check.append((position_x+1, position_y+1))
-    return check
-
 # status in ["safe", "flagged", "unknown"]
 class Space:
-    # player perspective
-    status = "safe"
-    number_of_unflagged_bombs = None
-
     def __init__(self, has_mine, position_x, position_y, field):
         self.field = field
         self.has_mine = has_mine
@@ -174,7 +159,7 @@ class Space:
         self.explosion_reached = True
         if self.has_mine:
             self.set_image(BOMB_IMAGE)
-        clock.tick(60)
+            pygame.time.wait(100)
 
     def set_image(self, image_path):
         self.image = pygame.image.load(image_path)
@@ -211,7 +196,10 @@ class Space:
             else:
                 raise ValueError("Invalid number of mines")     
     
-    def flag(self):
+    def flag(self, keep):
+        if keep and self.flagged:
+            return
+        
         if self.opened:
             return
         elif self.flagged:
@@ -221,61 +209,6 @@ class Space:
             self.flagged = True
             self.set_image(FLAGGED_IMAGE)
             return
-    
-    # def get_adjacent(self):
-    #     check = []
-    #     if self.position_x == 0:
-    #         if self.position_y == 0:
-    #             check.append((0, 1))
-    #             check.append((1, 1))
-    #             check.append((1, 0))
-    #         elif self.position_y == self.field.num_row - 1:
-    #             check.append((self.position_x, self.position_y-1))
-    #             check.append((self.position_x+1, self.position_y-1))
-    #             check.append((self.position_x+1, self.position_y))
-    #         else:
-    #             check.append((self.position_x, self.position_y-1))
-    #             check.append((self.position_x, self.position_y+1))
-    #             check.append((self.position_x+1, self.position_y-1))
-    #             check.append((self.position_x+1, self.position_y))
-    #             check.append((self.position_x+1, self.position_y+1))
-    #     elif self.position_x == self.field.num_col - 1:
-    #         if self.position_y == 0:
-    #             check.append((self.position_x, 1))
-    #             check.append((self.position_x-1, 0))
-    #             check.append((self.position_x-1, 1))
-    #         elif self.position_y == self.field.num_row - 1:
-    #             check.append((self.position_x-1, self.position_y))
-    #             check.append((self.position_x-1, self.position_y-1))
-    #             check.append((self.position_x, self.position_y-1))
-    #         else:
-    #             check.append((self.position_x, self.position_y-1))
-    #             check.append((self.position_x, self.position_y+1))
-    #             check.append((self.position_x-1, self.position_y-1))
-    #             check.append((self.position_x-1, self.position_y))
-    #             check.append((self.position_x-1, self.position_y+1))
-    #     elif self.position_y == 0:
-    #         check.append((self.position_x-1, self.position_y))
-    #         check.append((self.position_x+1, self.position_y))
-    #         check.append((self.position_x-1, self.position_y+1))
-    #         check.append((self.position_x, self.position_y+1))
-    #         check.append((self.position_x+1, self.position_y+1))
-    #     elif self.position_y == self.field.num_row - 1:
-    #         check.append((self.position_x-1, self.position_y))
-    #         check.append((self.position_x+1, self.position_y))
-    #         check.append((self.position_x-1, self.position_y-1))
-    #         check.append((self.position_x, self.position_y-1))
-    #         check.append((self.position_x+1, self.position_y-1))
-    #     else: 
-    #         check.append((self.position_x-1, self.position_y-1))
-    #         check.append((self.position_x-1, self.position_y))
-    #         check.append((self.position_x-1, self.position_y+1))
-    #         check.append((self.position_x, self.position_y-1))
-    #         check.append((self.position_x, self.position_y+1))
-    #         check.append((self.position_x+1, self.position_y-1))
-    #         check.append((self.position_x+1, self.position_y))
-    #         check.append((self.position_x+1, self.position_y+1))
-    #     return check
 
     def get_number(self):
         if self.has_mine:
@@ -287,6 +220,13 @@ class Space:
                 if self.field.array_of_spaces[position[0]][position[1]].has_mine:
                     num = num + 1
             return num
+    
+    def get_unopened(self):
+        num = 0
+        for adjacent_space_position in self.adjacent_space_positions:
+            if self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].opened == False:
+                num += 1
+        return num
 
 if __name__ == '__main__':
     main()
