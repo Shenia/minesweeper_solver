@@ -60,37 +60,17 @@ class Mapping:
 
     def process_clue_mark_bombs(self, clue):
         space = self.field[clue[0]][clue[1]]
-        num_bombs = clue[2]
-        known_value_total = 0
-        num_unknown_spaces = 0
-
-        for adjacent_position in space.adjacent_positions:
-            if self.field[adjacent_position[0]][adjacent_position[1]].status_known == False:
-                num_unknown_spaces += 1
-            if self.field[adjacent_position[0]][adjacent_position[1]].status_known == True:
-                known_value_total += self.field[adjacent_position[0]][adjacent_position[1]].value
-        
         space.clue_space = True
-        space.num_bombs = num_bombs
-        space.known_value_total = known_value_total
-        space.num_unknown_spaces = num_unknown_spaces
+        space.num_bombs = clue[2]
+        self.update_status((clue[0], clue[1]))
 
-        if num_bombs == known_value_total + num_unknown_spaces:
+        if space.num_bombs == space.known_value_total + space.num_unknown_spaces:
             for adjacent_position in space.adjacent_positions:
                 if self.field[adjacent_position[0]][adjacent_position[1]].status_known == False:
                     self.field[adjacent_position[0]][adjacent_position[1]].status_known = True
                     self.field[adjacent_position[0]][adjacent_position[1]].value = 1
         
-        for adjacent_position in space.adjacent_positions:
-            if self.field[adjacent_position[0]][adjacent_position[1]].status_known == False:
-                num_unknown_spaces += 1
-            if self.field[adjacent_position[0]][adjacent_position[1]].status_known == True:
-                known_value_total += self.field[adjacent_position[0]][adjacent_position[1]].value
-        
-        space.clue_space = True
-        space.num_bombs = num_bombs
-        space.known_value_total = known_value_total
-        space.num_unknown_spaces = num_unknown_spaces
+        self.update_status((clue[0], clue[1]))
         return
     
     def process_clue_mark_safe(self, clue):
@@ -121,6 +101,7 @@ class Mapping:
         
         space.known_value_total = known_value_total
         space.num_unknown_spaces = num_unknown_spaces
+        return
 
 class MappingSpace:
     def __init__(self, x, y, adjacent_positions):
