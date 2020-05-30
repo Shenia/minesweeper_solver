@@ -5,9 +5,9 @@ from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTO
 from solver import solver, get_adjacent
 
 def main():
-    nrow = 10
-    ncol = 15
-    number_of_bombs = 20
+    nrow = 15
+    ncol = 21
+    number_of_bombs = 60
     
     pygame.init() 
     global gameDisplay 
@@ -19,7 +19,6 @@ def main():
     solve_button = Button(ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
     save_button = Button(ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
     new_button = Button(ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
-    pygame.display.update()
     mode = "play"
 
     while mode == "play":
@@ -39,7 +38,6 @@ def main():
                     restart(f)
                 elif mouse_position[0] >= new_button.display_x and mouse_position[0] < new_button.display_x + BUTTON_WIDTH and mouse_position[1] >= new_button.display_y and mouse_position[1] < new_button.display_y + BUTTON_HEIGHT:
                     f = new_game(ncol, nrow, number_of_bombs)
-                    pygame.display.update()
 
         pygame.time.wait(60)
         
@@ -82,6 +80,8 @@ class Button:
     
     def set_button(self):
         gameDisplay.blit(self.image, (self.display_x, self.display_y))
+        rect = pygame.Rect(self.display_x, self.display_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+        pygame.display.update(rect)
 
 class Field:
     def __init__(self, num_col, num_row, position, num_bombs):
