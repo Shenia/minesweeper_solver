@@ -95,7 +95,21 @@ class Mapping:
     
     def process_clue_mark_safe(self, clue):
         space = self.field[clue[0]][clue[1]]
-        num_bombs = clue[2]
+        space.clue_space = True
+        space.num_bombs = clue[2]
+        self.update_status((clue[0], clue[1]))
+
+        if space.num_bombs == space.known_value_total:
+            for adjacent_position in space.adjacent_positions:
+                if self.field[adjacent_position[0]][adjacent_position[1]].status_known == False:
+                    self.field[adjacent_position[0]][adjacent_position[1]].status_known = True
+                    self.field[adjacent_position[0]][adjacent_position[1]].value = 0
+        
+        self.update_status((clue[0], clue[1]))
+        return
+    
+    def update_status(self, position):
+        space = self.field[position[0]][position[1]]
         known_value_total = 0
         num_unknown_spaces = 0
 
@@ -105,28 +119,8 @@ class Mapping:
             if self.field[adjacent_position[0]][adjacent_position[1]].status_known == True:
                 known_value_total += self.field[adjacent_position[0]][adjacent_position[1]].value
         
-        space.clue_space = True
-        space.num_bombs = num_bombs
         space.known_value_total = known_value_total
         space.num_unknown_spaces = num_unknown_spaces
-
-        if num_bombs == known_value_total:
-            for adjacent_position in space.adjacent_positions:
-                if self.field[adjacent_position[0]][adjacent_position[1]].status_known == False:
-                    self.field[adjacent_position[0]][adjacent_position[1]].status_known = True
-                    self.field[adjacent_position[0]][adjacent_position[1]].value = 0
-        
-        for adjacent_position in space.adjacent_positions:
-            if self.field[adjacent_position[0]][adjacent_position[1]].status_known == False:
-                num_unknown_spaces += 1
-            if self.field[adjacent_position[0]][adjacent_position[1]].status_known == True:
-                known_value_total += self.field[adjacent_position[0]][adjacent_position[1]].value
-        
-        space.clue_space = True
-        space.num_bombs = num_bombs
-        space.known_value_total = known_value_total
-        space.num_unknown_spaces = num_unknown_spaces
-        return
 
 class MappingSpace:
     def __init__(self, x, y, adjacent_positions):
