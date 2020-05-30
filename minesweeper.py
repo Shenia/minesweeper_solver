@@ -1,27 +1,24 @@
 import pygame
 import random
-from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, SOLVE_BUTTON_HEIGHT, SOLVE_BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, BACKGROUND_COLOUR
+from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, BACKGROUND_COLOUR
+from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, SAVE_BUTTON_IMAGE, NEW_BUTTON_IMAGE
 from solver import solver, get_adjacent
 
 def main():
     nrow = 10
-    ncol = 10
+    ncol = 15
     number_of_bombs = 20
-    screen_width = ncol * SPACE_SIDE_LENGTH + 2 * MARGIN
-    screen_height = nrow * SPACE_SIDE_LENGTH + 2 * MARGIN + SOLVE_BUTTON_HEIGHT + BUTTON_FIELD_MARGIN
     
     pygame.init() 
     global gameDisplay 
-    gameDisplay = pygame.display.set_mode((screen_width, screen_height))
+    gameDisplay = pygame.display.set_mode(set_display(ncol, nrow))
     gameDisplay.fill(BACKGROUND_COLOUR)
     pygame.display.set_caption("Minesweeper")
     
     f = Field(ncol, nrow, (MARGIN, MARGIN), number_of_bombs)
-    button = pygame.image.load(SOLVE_BUTTON_IMAGE)
-    button = pygame.transform.scale(button, (SOLVE_BUTTON_WIDTH, SOLVE_BUTTON_HEIGHT))
-    button_display_x = (ncol * SPACE_SIDE_LENGTH + 2 * MARGIN - SOLVE_BUTTON_WIDTH) / 2    
-    button_display_y = MARGIN + nrow * SPACE_SIDE_LENGTH + BUTTON_FIELD_MARGIN
-    gameDisplay.blit(button, (button_display_x, button_display_y))
+    solve_button = Button(ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
+    save_button = Button(ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
+    new_button = Button(ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
     pygame.display.update()
     mode = "play"
 
@@ -35,20 +32,56 @@ def main():
             elif event.type == pygame.MOUSEBUTTONUP and f.exploded == False and f.won == False:
                 mouse_position = pygame.mouse.get_pos()
                 if mouse_position[0] >= f.position[0] and mouse_position[0] < f.position[0] + f.width and mouse_position[1] >= f.position[1] and mouse_position[1] < f.position[1] + f.height:
-                    x = mouse_position[0] - f.position[0]
-                    y = mouse_position[1] - f.position[1]
-                    space_position_x = x // f.space_side_length
-                    space_position_y = y // f.space_side_length
-                    if event.button == 1:
-                        f.open(space_position_x, space_position_y)
-                    elif event.button == 3:
-                        f.flag(space_position_x, space_position_y, False)
-                elif mouse_position[0] >= button_display_x and mouse_position[0] < button_display_x + SOLVE_BUTTON_WIDTH and mouse_position[1] >= button_display_y and mouse_position[1] < button_display_y + SOLVE_BUTTON_HEIGHT:
+                    mouse_solver(f, mouse_position, event.button)
+                elif mouse_position[0] >= solve_button.display_x and mouse_position[0] < solve_button.display_x + BUTTON_WIDTH and mouse_position[1] >= solve_button.display_y and mouse_position[1] < solve_button.display_y + BUTTON_HEIGHT:
                     solver(f)
+                elif mouse_position[0] >= save_button.display_x and mouse_position[0] < save_button.display_x + BUTTON_WIDTH and mouse_position[1] >= save_button.display_y and mouse_position[1] < save_button.display_y + BUTTON_HEIGHT:
+                    restart(f)
+                elif mouse_position[0] >= new_button.display_x and mouse_position[0] < new_button.display_x + BUTTON_WIDTH and mouse_position[1] >= new_button.display_y and mouse_position[1] < new_button.display_y + BUTTON_HEIGHT:
+                    f = new_game(ncol, nrow, number_of_bombs)
+                    pygame.display.update()
+
         pygame.time.wait(60)
         
     pygame.quit()
     quit() 
+
+def new_game(ncol, nrow, number_of_bombs):
+    f = Field(ncol, nrow, (MARGIN, MARGIN), number_of_bombs)
+    return f
+
+def mouse_solver(field, mouse_position, event_button):
+    space_position_x = (mouse_position[0] - field.position[0]) // field.space_side_length
+    space_position_y = (mouse_position[1] - field.position[1]) // field.space_side_length
+    if event_button == 1:
+        field.open(space_position_x, space_position_y)
+    elif event_button == 3:
+        field.flag(space_position_x, space_position_y, False)
+    return
+
+def set_display(ncol, nrow):
+    screen_width = ncol * SPACE_SIDE_LENGTH + 2 * MARGIN
+    screen_height = nrow * SPACE_SIDE_LENGTH + 2 * MARGIN + BUTTON_HEIGHT + BUTTON_FIELD_MARGIN
+    return (screen_width, screen_height)
+
+def restart(field):
+    for col in field.array_of_spaces:
+        for space in col:
+            space.opened = False
+            space.flagged = False
+            space.set_image(INITIAL_IMAGE)
+    return
+
+class Button:
+    def __init__(self, ncol, nrow, image, order, total):
+        self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (BUTTON_WIDTH / 2)
+        self.display_y = MARGIN + nrow * SPACE_SIDE_LENGTH + BUTTON_FIELD_MARGIN
+        self.image = pygame.image.load(image)
+        self.image = pygame.transform.scale(self.image, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        self.set_button()
+    
+    def set_button(self):
+        gameDisplay.blit(self.image, (self.display_x, self.display_y))
 
 class Field:
     def __init__(self, num_col, num_row, position, num_bombs):
