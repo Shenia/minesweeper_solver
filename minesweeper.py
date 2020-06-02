@@ -1,13 +1,13 @@
 import pygame
 import random
 from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, BACKGROUND_COLOUR
-from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, SAVE_BUTTON_IMAGE, NEW_BUTTON_IMAGE
+from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, SAVE_BUTTON_IMAGE, NEW_BUTTON_IMAGE, PLAY_BUTTON_IMAGE
 from solver import solver, get_adjacent
 
 def main():
     nrow = 15
     ncol = 21
-    number_of_bombs = 60
+    number_of_bombs = 55
     
     pygame.init() 
     global gameDisplay 
@@ -21,28 +21,36 @@ def main():
     new_button = Button(ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
     mode = "play"
 
-    while mode == "play":
+    while True:
+        pygame.time.wait(60)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            if f.exploded or f.won:
-                mode = "exit"
-            elif event.type == pygame.MOUSEBUTTONUP and f.exploded == False and f.won == False:
+            elif event.type == pygame.MOUSEBUTTONUP:
                 mouse_position = pygame.mouse.get_pos()
-                if mouse_position[0] >= f.position[0] and mouse_position[0] < f.position[0] + f.width and mouse_position[1] >= f.position[1] and mouse_position[1] < f.position[1] + f.height:
+                if mode == "play" and mouse_position[0] >= f.position[0] and mouse_position[0] < f.position[0] + f.width and mouse_position[1] >= f.position[1] and mouse_position[1] < f.position[1] + f.height:
                     mouse_solver(f, mouse_position, event.button)
                 elif mouse_position[0] >= solve_button.display_x and mouse_position[0] < solve_button.display_x + BUTTON_WIDTH and mouse_position[1] >= solve_button.display_y and mouse_position[1] < solve_button.display_y + BUTTON_HEIGHT:
-                    solver(f)
+                    if mode == "play":
+                        mode = "solve"
+                        solve_button.set_button_img(PLAY_BUTTON_IMAGE)
+                    elif mode == "solve":
+                        mode = "play"
+                        solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                 elif mouse_position[0] >= save_button.display_x and mouse_position[0] < save_button.display_x + BUTTON_WIDTH and mouse_position[1] >= save_button.display_y and mouse_position[1] < save_button.display_y + BUTTON_HEIGHT:
                     restart(f)
+                    mode = "play"
+                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                 elif mouse_position[0] >= new_button.display_x and mouse_position[0] < new_button.display_x + BUTTON_WIDTH and mouse_position[1] >= new_button.display_y and mouse_position[1] < new_button.display_y + BUTTON_HEIGHT:
+                    del f
                     f = new_game(ncol, nrow, number_of_bombs)
+                    mode = "play"
+                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
 
-        pygame.time.wait(60)
-        
-    pygame.quit()
-    quit() 
+        if mode == "solve":
+            solver(f)
 
 def new_game(ncol, nrow, number_of_bombs):
     f = Field(ncol, nrow, (MARGIN, MARGIN), number_of_bombs)
@@ -63,6 +71,8 @@ def set_display(ncol, nrow):
     return (screen_width, screen_height)
 
 def restart(field):
+    field.exploded = False
+    field.won = False
     for col in field.array_of_spaces:
         for space in col:
             space.opened = False
@@ -82,6 +92,13 @@ class Button:
         gameDisplay.blit(self.image, (self.display_x, self.display_y))
         rect = pygame.Rect(self.display_x, self.display_y, BUTTON_WIDTH, BUTTON_HEIGHT)
         pygame.display.update(rect)
+        return
+    
+    def set_button_img(self, img):
+        self.image = pygame.image.load(img)
+        self.image = pygame.transform.scale(self.image, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        self.set_button()
+        return
 
 class Field:
     def __init__(self, num_col, num_row, position, num_bombs):
@@ -112,6 +129,7 @@ class Field:
     def get_clues(self):
         clues = []
         opened = []
+        flagged = []
         for x, col in enumerate(self.array_of_spaces):
             for y, space in enumerate(col):
                 if space.opened:
@@ -119,7 +137,9 @@ class Field:
                     opened.append((x, y))
                     if num_bombs != 0:
                         clues.append((x, y, num_bombs))
-        return clues, opened
+                elif space.flagged:
+                    flagged.append((x, y))
+        return clues, opened, flagged
 
     def open(self, position_x, position_y):
         if self.bombs_set == False:
@@ -241,6 +261,7 @@ class Space:
         else:
             self.flagged = True
             self.set_image(FLAGGED_IMAGE)
+            pygame.time.wait(70)
             return
 
     def get_number(self):
