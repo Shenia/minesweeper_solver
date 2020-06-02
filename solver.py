@@ -138,12 +138,20 @@ class Mapping:
         link = Link(self.num_bombs - num_known_bombs, unknown_spaces)
         self.links.append(link)
 
+        additionalLinks = []
+
         for i1, link1 in enumerate(self.links):
             for i2, link2 in enumerate(self.links):
                 if link2.spaces.issuperset(link1.spaces):
                     if len(link2.spaces.difference(link1.spaces)) != 0:
                         link2.spaces = link2.spaces.difference(link1.spaces)
                         link2.num_bombs = link2.num_bombs - link1.num_bombs
+                elif ((link2.num_bombs - link1.num_bombs) == len(link2.spaces.difference(link1.spaces))):
+                    links = [Link(0, link1.spaces.difference(link2.spaces)), Link(link1.num_bombs, link2.spaces.intersection(link1.spaces)), Link((link2.num_bombs - link1.num_bombs), link2.spaces.difference(link1.spaces))]
+                    additionalLinks.extend(links)
+
+        self.links.extend(additionalLinks)
+        
         for link in self.links:
             if link.num_bombs == 0:
                 for position in link.spaces:
