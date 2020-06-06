@@ -21,3 +21,4 @@ Todos:
 11. add clues exhausted notification/terminate solver function
 12. check for consistencies in class/functions structures
 13. delete print statements
+14. write a better README
