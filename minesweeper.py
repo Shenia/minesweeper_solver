@@ -20,9 +20,9 @@ def main():
     
     # Objects Setup
     field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs)
-    solve_button = Button(BUTTON_HEIGHT, BUTTON_WIDTH, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
-    save_button = Button(BUTTON_HEIGHT, BUTTON_WIDTH, ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
-    new_button = Button(BUTTON_HEIGHT, BUTTON_WIDTH, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
+    solve_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
+    save_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
+    new_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
 
     # Game Mode: play, solve, end
     mode = "play"
@@ -90,9 +90,11 @@ class Button:
     def __init__(self, button_width, button_height, ncol, nrow, image, order, total):
         self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (button_width / 2)
         self.display_y = MARGIN + nrow * SPACE_SIDE_LENGTH + BUTTON_FIELD_MARGIN
+        self.width = button_width
+        self.height = button_height
         self.image = pygame.image.load(image)
-        self.image = pygame.transform.scale(self.image, (button_width, button_height))
-        self.rect = pygame.Rect(self.display_x, self.display_y, button_width, button_height)
+        self.image = pygame.transform.scale(self.image, (self.width, self.height))
+        self.rect = pygame.Rect(self.display_x, self.display_y, self.width, self.height)
         self.set_button()
     
     # Set and display button image
@@ -104,7 +106,7 @@ class Button:
     # Replace and display button image
     def set_button_img(self, img):
         self.image = pygame.image.load(img)
-        self.image = pygame.transform.scale(self.image, (button_width, button_height))
+        self.image = pygame.transform.scale(self.image, (self.width, self.height))
         self.set_button()
         return
 
@@ -163,11 +165,12 @@ class Field:
     # Restart Game
     def restart(self):
         self.exploded = False
-        self.won = self
+        self.won = False
         for col in self.array_of_spaces:
             for space in col:
                 space.opened = False
                 space.flagged = False
+                space.explosion_reached = False
                 space.set_image(INITIAL_IMAGE)
         return
 
@@ -223,7 +226,7 @@ class Field:
         
         # Positions are drawn randomly from space_list and removed. Bombs will be planted in drawn positions.
         for n in range(self.num_bombs):
-            random_index = random.randint(0, len(rand_list) - 1)
+            random_index = random.randint(0, len(space_list) - 1)
             random_number = space_list.pop(random_index) 
             x = random_number % self.num_col
             y = random_number // self.num_col
@@ -233,6 +236,9 @@ class Field:
 # status in ["safe", "flagged", "unknown"]
 class Space:
     def __init__(self, has_mine, position_x, position_y, field):        
+        # Set field
+        self.field = field
+        
         # Position and display
         self.position_x = position_x
         self.position_y = position_y
@@ -242,12 +248,13 @@ class Space:
         self.set_image(INITIAL_IMAGE)
                 
         # Game properties
-        self.field = field
         self.has_mine = has_mine
-        self.opened = False
-        self.flagged = False
         self.explosion_reached = False
         self.adjacent_space_positions = get_adjacent(self.position_x, self.position_y, self.field.num_col, self.field.num_row)
+
+        # Player/solver toggle
+        self.opened = False
+        self.flagged = False
     
     # Set and display image
     def set_image(self, image_path):
@@ -258,6 +265,7 @@ class Space:
         pygame.display.update(rect)
     
     # Explode self, add adjacent spaces to explosion queue
+    # TODO: rewrite explosion function (move to field)
     def explosion(self, queue):
         self.explode()
         for adjacent_space_position in self.adjacent_space_positions:
@@ -272,14 +280,14 @@ class Space:
             self.set_image(BOMB_IMAGE)
             pygame.time.wait(100)
 
-    # Open space
+    # Open space, accessed through field
     def open(self):
         if self.opened or self.flagged:
             return
         elif self.has_mine:
-            self.field.exploded = True
             self.opened = True
             self.flagged = False
+            self.field.exploded = True
             queue = self.explosion([])
             while queue:
                 position = queue.pop(0)
@@ -297,32 +305,33 @@ class Space:
                 return 
             elif num_mines >= 1 and num_mines <= 8:
                 self.set_image(IMAGE_DICTIONARY[num_mines])
-                return
-            else:
-                raise ValueError("Invalid number of mines")     
+                return   
     
+    # Flag space, accessed through field. 
+    # If keep and the space is already flagged, then the space continues to stay flagged
+    # Else if not keep and the space is already flagged, then the space is unflagged
     def flag(self, keep):
-        if keep and self.flagged:
-            return
-        
         if self.opened:
             return
-        elif self.flagged:
+        elif keep and self.flagged:
+            return
+        elif keep == False and self.flagged:
             self.flagged = False
             self.set_image(INITIAL_IMAGE)
+            return
         else:
             self.flagged = True
             self.set_image(FLAGGED_IMAGE)
             pygame.time.wait(70)
             return
 
+    # Get the number of mines in adjacent spaces
     def get_number(self):
         if self.has_mine:
-            return -1
+            raise ValueError("Can't get clue from exploded space")  
         else:
             num = 0
-            check = self.adjacent_space_positions
-            for position in check:
+            for position in self.adjacent_space_positions:
                 if self.field.array_of_spaces[position[0]][position[1]].has_mine:
                     num = num + 1
             return num
