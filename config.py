@@ -14,3 +14,7 @@ SOLVE_BUTTON_IMAGE = "img/solve_button.png"
 PLAY_BUTTON_IMAGE = "img/play_button.png"
 SAVE_BUTTON_IMAGE = "img/save_button.png"
 NEW_BUTTON_IMAGE = "img/new_button.png"
+
+NUMBER_OF_ROWS = 15 
+NUMBER_OF_COLS = 21 
+NUMBER_OF_BOMBS = 55

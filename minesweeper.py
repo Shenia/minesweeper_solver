@@ -2,20 +2,24 @@ import pygame
 import random
 from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, BACKGROUND_COLOUR
 from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, SAVE_BUTTON_IMAGE, NEW_BUTTON_IMAGE, PLAY_BUTTON_IMAGE
+from config import NUMBER_OF_ROWS, NUMBER_OF_COLS, NUMBER_OF_BOMBS
 from solver import solver, get_adjacent
 
 def main():
-    nrow = 15
-    ncol = 21
-    number_of_bombs = 55
+    # Game Settings
+    nrow = NUMBER_OF_ROWS
+    ncol = NUMBER_OF_COLS
+    nbombs = NUMBER_OF_BOMBS
     
+    # Window Setup
     pygame.init() 
     global gameDisplay 
     gameDisplay = pygame.display.set_mode(set_display(ncol, nrow))
     gameDisplay.fill(BACKGROUND_COLOUR)
     pygame.display.set_caption("Minesweeper")
     
-    f = Field(ncol, nrow, (MARGIN, MARGIN), number_of_bombs)
+    # Objects Setup
+    field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs)
     solve_button = Button(ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
     save_button = Button(ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
     new_button = Button(ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
@@ -30,8 +34,8 @@ def main():
                 quit()
             elif event.type == pygame.MOUSEBUTTONUP:
                 mouse_position = pygame.mouse.get_pos()
-                if mode == "play" and mouse_position[0] >= f.position[0] and mouse_position[0] < f.position[0] + f.width and mouse_position[1] >= f.position[1] and mouse_position[1] < f.position[1] + f.height:
-                    mouse_solver(f, mouse_position, event.button)
+                if mode == "play" and mouse_position[0] >= field.position[0] and mouse_position[0] < field.position[0] + field.width and mouse_position[1] >= field.position[1] and mouse_position[1] < field.position[1] + field.height:
+                    mouse_solver(field, mouse_position, event.button)
                 elif mouse_position[0] >= solve_button.display_x and mouse_position[0] < solve_button.display_x + BUTTON_WIDTH and mouse_position[1] >= solve_button.display_y and mouse_position[1] < solve_button.display_y + BUTTON_HEIGHT:
                     if mode == "play":
                         mode = "solve"
@@ -40,20 +44,20 @@ def main():
                         mode = "play"
                         solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                 elif mouse_position[0] >= save_button.display_x and mouse_position[0] < save_button.display_x + BUTTON_WIDTH and mouse_position[1] >= save_button.display_y and mouse_position[1] < save_button.display_y + BUTTON_HEIGHT:
-                    restart(f)
+                    restart(field)
                     mode = "play"
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                 elif mouse_position[0] >= new_button.display_x and mouse_position[0] < new_button.display_x + BUTTON_WIDTH and mouse_position[1] >= new_button.display_y and mouse_position[1] < new_button.display_y + BUTTON_HEIGHT:
-                    del f
-                    f = new_game(ncol, nrow, number_of_bombs)
+                    del field
+                    field = new_game(ncol, nrow, (MARGIN, MARGIN), nbombs)
                     mode = "play"
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
 
         if mode == "solve":
-            solver(f)
+            solver(field)
 
-def new_game(ncol, nrow, number_of_bombs):
-    f = Field(ncol, nrow, (MARGIN, MARGIN), number_of_bombs)
+def new_game(ncol, nrow, margin, nbombs):
+    f = Field(ncol, nrow, margin, nbombs)
     return f
 
 def mouse_solver(field, mouse_position, event_button):
