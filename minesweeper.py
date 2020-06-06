@@ -14,32 +14,34 @@ def main():
     # Window Setup
     pygame.init() 
     global gameDisplay 
-    gameDisplay = pygame.display.set_mode(set_display(ncol, nrow))
+    gameDisplay = pygame.display.set_mode(screen_dimensions(ncol, nrow, SPACE_SIDE_LENGTH, MARGIN, BUTTON_HEIGHT, BUTTON_FIELD_MARGIN))
     gameDisplay.fill(BACKGROUND_COLOUR)
     pygame.display.set_caption("Minesweeper")
     
     # Objects Setup
     field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs)
-    solve_button = Button(ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
-    save_button = Button(ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
-    new_button = Button(ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
+    solve_button = Button(BUTTON_HEIGHT, BUTTON_WIDTH, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
+    save_button = Button(BUTTON_HEIGHT, BUTTON_WIDTH, ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
+    new_button = Button(BUTTON_HEIGHT, BUTTON_WIDTH, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
 
-    # Game Mode
+    # Game Mode: play, solve, end
     mode = "play"
 
     while True:
         pygame.time.wait(60)
 
         for event in pygame.event.get():
+            # Quit game
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+
+            # Select action
             elif event.type == pygame.MOUSEBUTTONUP:
                 mouse_position = pygame.mouse.get_pos()
-
                 if mode == "play" and field.rect.collidepoint(mouse_position):
                     mouse_solver(field, mouse_position, event.button)
-                elif solve_button.rect.collidepoint(mouse_position):
+                elif mode != "end" and solve_button.rect.collidepoint(mouse_position):
                     if mode == "play":
                         mode = "solve"
                         solve_button.set_button_img(PLAY_BUTTON_IMAGE)
@@ -49,7 +51,7 @@ def main():
                 elif save_button.rect.collidepoint(mouse_position):
                     mode = "play"
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
-                    restart(field)
+                    field.restart()
                 elif new_button.rect.collidepoint(mouse_position):
                     mode = "play"
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
@@ -58,11 +60,16 @@ def main():
 
         if mode == "solve":
             solver(field)
+        
+        if field.won or field.exploded:
+            mode = "end"
 
+# Create new game
 def new_game(ncol, nrow, margin, nbombs):
     f = Field(ncol, nrow, margin, nbombs)
     return f
 
+# Handle mouse-field interaction
 def mouse_solver(field, mouse_position, event_button):
     space_position_x = (mouse_position[0] - field.position[0]) // field.space_side_length
     space_position_y = (mouse_position[1] - field.position[1]) // field.space_side_length
@@ -72,38 +79,30 @@ def mouse_solver(field, mouse_position, event_button):
         field.flag(space_position_x, space_position_y, False)
     return
 
-def set_display(ncol, nrow):
-    screen_width = ncol * SPACE_SIDE_LENGTH + 2 * MARGIN
-    screen_height = nrow * SPACE_SIDE_LENGTH + 2 * MARGIN + BUTTON_HEIGHT + BUTTON_FIELD_MARGIN
+# Calculate screen dimensions
+# Set to have one row of buttons side-by-side, assume field width is longer than the sum of all buttons' widths
+def screen_dimensions(ncol, nrow, space_side_length, margin, button_height, button_field_margin):
+    screen_width = ncol * space_side_length + 2 * margin
+    screen_height = nrow * space_side_length + 2 * margin + button_height + button_field_margin
     return (screen_width, screen_height)
 
-def restart(field):
-    field.exploded = False
-    field.won = False
-    for col in field.array_of_spaces:
-        for space in col:
-            space.opened = False
-            space.flagged = False
-            space.set_image(INITIAL_IMAGE)
-    return
-
 class Button:
-    def __init__(self, ncol, nrow, image, order, total):
-        self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (BUTTON_WIDTH / 2)
+    def __init__(self, button_width, button_height, ncol, nrow, image, order, total):
+        self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (button_width / 2)
         self.display_y = MARGIN + nrow * SPACE_SIDE_LENGTH + BUTTON_FIELD_MARGIN
         self.image = pygame.image.load(image)
-        self.image = pygame.transform.scale(self.image, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        self.image = pygame.transform.scale(self.image, (button_width, button_height))
+        self.rect = pygame.Rect(self.display_x, self.display_y, button_width, button_height)
         self.set_button()
     
     def set_button(self):
         gameDisplay.blit(self.image, (self.display_x, self.display_y))
-        self.rect = pygame.Rect(self.display_x, self.display_y, BUTTON_WIDTH, BUTTON_HEIGHT)
         pygame.display.update(self.rect)
         return
     
     def set_button_img(self, img):
         self.image = pygame.image.load(img)
-        self.image = pygame.transform.scale(self.image, (BUTTON_WIDTH, BUTTON_HEIGHT))
+        self.image = pygame.transform.scale(self.image, (button_width, button_height))
         self.set_button()
         return
 
@@ -127,18 +126,23 @@ class Field:
         self.won = False
         self.bombs_set = False
 
+    # Accessible by solver
     def get_started(self):
         return self.bombs_set
     
+    # Accessible by solver
     def get_num_bombs(self):
         return self.num_bombs
     
+    # Accessible by solver
     def get_num_row(self):
         return self.num_row
     
+    # Accessible by solver
     def get_num_col(self):
         return self.num_col
 
+    # Accessible by solver
     def get_clues(self):
         clues = []
         opened = []
@@ -154,20 +158,37 @@ class Field:
                     flagged.append((x, y))
         return clues, opened, flagged
 
+    # Restart Game
+    def restart(self):
+        self.exploded = False
+        self.won = self
+        for col in self.array_of_spaces:
+            for space in col:
+                space.opened = False
+                space.flagged = False
+                space.set_image(INITIAL_IMAGE)
+        return
+
+    # Open the space at position_x, position_y
     def open(self, position_x, position_y):
+        # If game hasn't started, set bombs
         if self.bombs_set == False:
             self.bombs_set = True
             self.plant_bombs(position_x, position_y)
             
-        self.array_of_spaces[position_x][position_y].open()
+        # Open the space at position_x, position_y
         #TODO: add winning sequence
+        self.array_of_spaces[position_x][position_y].open()
+        # Determine if game is lost
         if self.exploded == True:
             print("exploded")
-        if self.num_bombs == self.get_unopened():
+        # Determine if game is won
+        if self.num_bombs == self.get_unopened() and self.exploded != True:
             self.won = True
             print("win")
         return
 
+    # Return the number of unopened spaces
     def get_unopened(self):
         num = 0
         for col in self.array_of_spaces:
@@ -176,23 +197,32 @@ class Field:
                     num = num + 1
         return num
     
+    # Flag the space
+    # If keep and the space is already flagged, then the space continues to stay flagged
+    # Else if not keep and the space is already flagged, then the space is unflagged
     def flag(self, position_x, position_y, keep):
         self.array_of_spaces[position_x][position_y].flag(keep)
 
+    # Randomly plant bombs
+    # The position passed in and the positions immediately adjacent to it will not contain bombs
     def plant_bombs(self, position_x, position_y):    
-        rand_list = []
+        # Each space in the field is assigned a number determined by their position. Space at position (x, y) is assigned x*ncol+y
+        # The number is placed into space_list, where random positions to plant bombs are drawn from
+        space_list = []
         for i in range(self.num_col * self.num_row):
-            rand_list.append(i)
+            space_list.append(i)
         
-        adjacent = get_adjacent(position_x, position_y, self.num_col, self.num_row)
-        adjacent.append((position_x, position_y))
-        for position in adjacent:
+        # The numbers representing bomb_free spaces are removed from space_list so that bombs won't be planted there
+        bomb_free_spaces = get_adjacent(position_x, position_y, self.num_col, self.num_row)
+        bomb_free_spaces.append((position_x, position_y))
+        for position in bomb_free_spaces:
             num = position[1] * self.num_col + position[0]
-            rand_list.remove(num)
+            space_list.remove(num)
         
+        # Positions are drawn randomly from space_list and removed. Bombs will be planted in drawn positions.
         for n in range(self.num_bombs):
             random_index = random.randint(0, len(rand_list) - 1)
-            random_number = rand_list.pop(random_index) 
+            random_number = space_list.pop(random_index) 
             x = random_number % self.num_col
             y = random_number // self.num_col
             self.array_of_spaces[x][y].has_mine = True
@@ -287,13 +317,6 @@ class Space:
                 if self.field.array_of_spaces[position[0]][position[1]].has_mine:
                     num = num + 1
             return num
-    
-    def get_unopened(self):
-        num = 0
-        for adjacent_space_position in self.adjacent_space_positions:
-            if self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].opened == False:
-                num += 1
-        return num
 
 if __name__ == '__main__':
     main()
