@@ -95,11 +95,13 @@ class Button:
         self.rect = pygame.Rect(self.display_x, self.display_y, button_width, button_height)
         self.set_button()
     
+    # Set and display button image
     def set_button(self):
         gameDisplay.blit(self.image, (self.display_x, self.display_y))
         pygame.display.update(self.rect)
         return
     
+    # Replace and display button image
     def set_button_img(self, img):
         self.image = pygame.image.load(img)
         self.image = pygame.transform.scale(self.image, (button_width, button_height))
@@ -230,20 +232,32 @@ class Field:
 
 # status in ["safe", "flagged", "unknown"]
 class Space:
-    def __init__(self, has_mine, position_x, position_y, field):
+    def __init__(self, has_mine, position_x, position_y, field):        
+        # Position and display
+        self.position_x = position_x
+        self.position_y = position_y
+        self.side_length = self.field.space_side_length
+        self.display_x = self.field.position[0] + self.position_x * self.side_length
+        self.display_y = self.field.position[1] + self.position_y * self.side_length
+        self.set_image(INITIAL_IMAGE)
+                
+        # Game properties
         self.field = field
         self.has_mine = has_mine
         self.opened = False
         self.flagged = False
         self.explosion_reached = False
-        self.position_x = position_x
-        self.position_y = position_y
-        self.side_length = self.field.space_side_length
-        self.display_position_x = self.field.position[0] + self.position_x * self.side_length
-        self.display_position_y = self.field.position[1] + self.position_y * self.side_length
         self.adjacent_space_positions = get_adjacent(self.position_x, self.position_y, self.field.num_col, self.field.num_row)
-        self.set_image(INITIAL_IMAGE)
     
+    # Set and display image
+    def set_image(self, image_path):
+        self.image = pygame.image.load(image_path)
+        self.image = pygame.transform.scale(self.image, (self.side_length, self.side_length))        
+        gameDisplay.blit(self.image, (self.display_x, self.display_y))
+        rect = pygame.Rect(self.display_x, self.display_y, self.side_length, self.side_length)
+        pygame.display.update(rect)
+    
+    # Explode self, add adjacent spaces to explosion queue
     def explosion(self, queue):
         self.explode()
         for adjacent_space_position in self.adjacent_space_positions:
@@ -251,19 +265,14 @@ class Space:
                 queue.append(adjacent_space_position)
         return queue
 
+    # Any space can explode
     def explode(self):
         self.explosion_reached = True
         if self.has_mine:
             self.set_image(BOMB_IMAGE)
             pygame.time.wait(100)
 
-    def set_image(self, image_path):
-        self.image = pygame.image.load(image_path)
-        self.image = pygame.transform.scale(self.image, (self.side_length, self.side_length))        
-        gameDisplay.blit(self.image, (self.display_position_x, self.display_position_y))
-        rect = pygame.Rect(self.display_position_x, self.display_position_y, self.side_length, self.side_length)
-        pygame.display.update(rect)
-
+    # Open space
     def open(self):
         if self.opened or self.flagged:
             return
