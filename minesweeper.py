@@ -131,20 +131,8 @@ class Field:
         self.bombs_set = False
 
     # Accessible by solver
-    def get_started(self):
-        return self.bombs_set
-    
-    # Accessible by solver
-    def get_num_bombs(self):
-        return self.num_bombs
-    
-    # Accessible by solver
-    def get_num_row(self):
-        return self.num_row
-    
-    # Accessible by solver
-    def get_num_col(self):
-        return self.num_col
+    def get_field_info(self):
+        return (self.num_row, self.num_col, self.num_bombs, self.bombs_set)
 
     # Accessible by solver
     def get_clues(self):

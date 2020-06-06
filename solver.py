@@ -1,10 +1,8 @@
 import pygame
 
 def solver(field):
-    num_row = field.get_num_row()
-    num_col = field.get_num_col()
-    num_bombs = field.get_num_bombs()
-    mapping = Mapping(num_col, num_row, num_bombs)
+    (num_row, num_col, num_bombs, started) = field.get_field_info()
+    mapping = Mapping(num_col, num_row, num_bombs, started)
     (clues, opened, flagged) = field.get_clues()
 
     for opened_space in opened:
@@ -38,14 +36,14 @@ def solver(field):
     return
 
 class Mapping:
-    def __init__(self, ncol, nrow, nbombs):
+    def __init__(self, ncol, nrow, nbombs, started):
         self.field = [[MappingSpace(x, y, get_adjacent(x, y, ncol, nrow)) for y in range(nrow)] for x in range(ncol)]
         self.links = []
         self.num_bombs = nbombs
+        self.started = started
 
     def open(self, field, default):
-        started = field.get_started()
-        if not started:
+        if not self.started:
             field.open(default[0], default[1])
         else:
             for col in self.field:
