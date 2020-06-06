@@ -144,10 +144,9 @@ class Field:
             for y, space in enumerate(col):
                 if space.opened:
                     opened.append((x, y))
-                if space.opened and num_bombs != 0:
-                    num_bombs = space.get_number()
-                    clues.append((x, y, num_bombs))
-                if space.flagged:
+                    if space.get_number() != 0:
+                        clues.append((x, y, space.get_number()))
+                elif space.flagged:
                     flagged.append((x, y))
         return clues, opened, flagged
 

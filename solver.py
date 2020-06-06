@@ -1,6 +1,9 @@
 import pygame
 DEFAULT_OPEN_SPACE = (2, 3)
 
+# TODO: add clues exhausted sequence
+# TODO: optimize space/time
+# TODO: finish commenting
 def solver(field):
     # Get clues from field
     (num_row, num_col, num_bombs, started) = field.get_field_info()
