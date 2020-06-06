@@ -18,7 +18,7 @@ def main():
     gameDisplay.fill(BACKGROUND_COLOUR)
     pygame.display.set_caption("Minesweeper")
     
-    # Objects Setup
+    # Object Setup
     field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs)
     solve_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
     save_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
@@ -41,13 +41,12 @@ def main():
                 mouse_position = pygame.mouse.get_pos()
                 if mode == "play" and field.rect.collidepoint(mouse_position):
                     mouse_solver(field, mouse_position, event.button)
-                elif mode != "end" and solve_button.rect.collidepoint(mouse_position):
-                    if mode == "play":
-                        mode = "solve"
-                        solve_button.set_button_img(PLAY_BUTTON_IMAGE)
-                    elif mode == "solve":
-                        mode = "play"
-                        solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
+                elif mode == "play" and solve_button.rect.collidepoint(mouse_position):
+                    mode = "solve"
+                    solve_button.set_button_img(PLAY_BUTTON_IMAGE)
+                elif mode == "solve" and solve_button.rect.collidepoint(mouse_position):
+                    mode = "play"
+                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                 elif save_button.rect.collidepoint(mouse_position):
                     mode = "play"
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
@@ -86,6 +85,7 @@ def screen_dimensions(ncol, nrow, space_side_length, margin, button_height, butt
     screen_height = nrow * space_side_length + 2 * margin + button_height + button_field_margin
     return (screen_width, screen_height)
 
+# TODO: set public/private functions
 class Button:
     def __init__(self, button_width, button_height, ncol, nrow, image, order, total):
         self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (button_width / 2)
@@ -110,6 +110,7 @@ class Button:
         self.set_button()
         return
 
+# TODO: set public/private functions
 class Field:
     def __init__(self, num_col, num_row, position, num_bombs):
         # Field size/location
@@ -142,11 +143,11 @@ class Field:
         for x, col in enumerate(self.array_of_spaces):
             for y, space in enumerate(col):
                 if space.opened:
-                    num_bombs = space.get_number()
                     opened.append((x, y))
-                    if num_bombs != 0:
-                        clues.append((x, y, num_bombs))
-                elif space.flagged:
+                if space.opened and num_bombs != 0:
+                    num_bombs = space.get_number()
+                    clues.append((x, y, num_bombs))
+                if space.flagged:
                     flagged.append((x, y))
         return clues, opened, flagged
 
@@ -221,7 +222,7 @@ class Field:
             self.array_of_spaces[x][y].has_mine = True
         return
 
-# status in ["safe", "flagged", "unknown"]
+# TODO: set public/private functions
 class Space:
     def __init__(self, has_mine, position_x, position_y, field):        
         # Set field
@@ -238,6 +239,7 @@ class Space:
         # Game properties
         self.has_mine = has_mine
         self.explosion_reached = False
+        # TODO: change positions to space pointers
         self.adjacent_space_positions = get_adjacent(self.position_x, self.position_y, self.field.num_col, self.field.num_row)
 
         # Player/solver toggle

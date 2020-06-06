@@ -1,40 +1,55 @@
 import pygame
+DEFAULT_OPEN_SPACE = (2, 3)
 
 def solver(field):
+    # Get clues from field
     (num_row, num_col, num_bombs, started) = field.get_field_info()
-    mapping = Mapping(num_col, num_row, num_bombs, started)
     (clues, opened, flagged) = field.get_clues()
 
+    # Create Mapping for abstration of the field
+    mapping = Mapping(num_col, num_row, num_bombs, started)
+
+    # Mark opened spaces in mapping
     for opened_space in opened:
         mapping.process_opened(opened_space)
 
+    # Mark flagged spaces in mapping
     for flagged_space in flagged:
         mapping.process_flagged(flagged_space)
 
+    # Process clues: mark clue_spaces in mapping to be processed
     for clue in clues:
         mapping.process_clue(clue)
     
+    # Mark bombs from clues(Rule 1): if the number of unopened adjacent spaces = the number of adjacent bombs, mark all adjacent unopened as bombs
     for col in mapping.field:
         for space in col:
             if space.clue_space:
                 mapping.process_clue_mark_bombs(space)
 
+    # Mark safe spaces from clues(Rule 2): if the number of flagged adjacent spaces = the number of adjacent bombs, mark all adjacent unflagged as safe
     for col in mapping.field:
         for space in col:
             if space.clue_space:
                 mapping.process_clue_mark_safe(space)
     
+    # Rule 3
     for col in mapping.field:
         for space in col:
             if space.clue_space:
                 mapping.set_links(space)
 
+    # Process Rule 3
     mapping.process_links()
     
+    # Flag known bombs in game field according to mapping
     mapping.flag(field)
-    mapping.open(field, (2, 3))
+
+    # Open known safe spaces in game field according to mapping. If the game hasn't started, open the space at the position DEFAULT_OPEN_SPACE
+    mapping.open(field, DEFAULT_OPEN_SPACE)
     return
 
+# TODO: set public/private functions
 class Mapping:
     def __init__(self, ncol, nrow, nbombs, started):
         self.field = [[MappingSpace(x, y, get_adjacent(x, y, ncol, nrow)) for y in range(nrow)] for x in range(ncol)]
@@ -181,12 +196,14 @@ class Mapping:
         space.num_unknown_spaces = num_unknown_spaces
         return
 
+# TODO: set public/private functions
 class Link:
     def __init__(self, num_bombs, spaces):
         self.num_bombs = num_bombs
         self.spaces = spaces
         self.delete = False
 
+# TODO: set public/private functions
 class MappingSpace:
     def __init__(self, x, y, adjacent_positions):
         self.opened = False
