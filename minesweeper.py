@@ -23,6 +23,8 @@ def main():
     solve_button = Button(ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
     save_button = Button(ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
     new_button = Button(ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
+
+    # Game Mode
     mode = "play"
 
     while True:
@@ -34,24 +36,25 @@ def main():
                 quit()
             elif event.type == pygame.MOUSEBUTTONUP:
                 mouse_position = pygame.mouse.get_pos()
-                if mode == "play" and mouse_position[0] >= field.position[0] and mouse_position[0] < field.position[0] + field.width and mouse_position[1] >= field.position[1] and mouse_position[1] < field.position[1] + field.height:
+
+                if mode == "play" and field.rect.collidepoint(mouse_position):
                     mouse_solver(field, mouse_position, event.button)
-                elif mouse_position[0] >= solve_button.display_x and mouse_position[0] < solve_button.display_x + BUTTON_WIDTH and mouse_position[1] >= solve_button.display_y and mouse_position[1] < solve_button.display_y + BUTTON_HEIGHT:
+                elif solve_button.rect.collidepoint(mouse_position):
                     if mode == "play":
                         mode = "solve"
                         solve_button.set_button_img(PLAY_BUTTON_IMAGE)
                     elif mode == "solve":
                         mode = "play"
                         solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
-                elif mouse_position[0] >= save_button.display_x and mouse_position[0] < save_button.display_x + BUTTON_WIDTH and mouse_position[1] >= save_button.display_y and mouse_position[1] < save_button.display_y + BUTTON_HEIGHT:
-                    restart(field)
+                elif save_button.rect.collidepoint(mouse_position):
                     mode = "play"
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
-                elif mouse_position[0] >= new_button.display_x and mouse_position[0] < new_button.display_x + BUTTON_WIDTH and mouse_position[1] >= new_button.display_y and mouse_position[1] < new_button.display_y + BUTTON_HEIGHT:
+                    restart(field)
+                elif new_button.rect.collidepoint(mouse_position):
+                    mode = "play"
+                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                     del field
                     field = new_game(ncol, nrow, (MARGIN, MARGIN), nbombs)
-                    mode = "play"
-                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
 
         if mode == "solve":
             solver(field)
@@ -94,8 +97,8 @@ class Button:
     
     def set_button(self):
         gameDisplay.blit(self.image, (self.display_x, self.display_y))
-        rect = pygame.Rect(self.display_x, self.display_y, BUTTON_WIDTH, BUTTON_HEIGHT)
-        pygame.display.update(rect)
+        self.rect = pygame.Rect(self.display_x, self.display_y, BUTTON_WIDTH, BUTTON_HEIGHT)
+        pygame.display.update(self.rect)
         return
     
     def set_button_img(self, img):
@@ -106,14 +109,20 @@ class Button:
 
 class Field:
     def __init__(self, num_col, num_row, position, num_bombs):
+        # Field size/location
         self.position = position
-        self.num_bombs = num_bombs
         self.height = num_row * SPACE_SIDE_LENGTH
         self.width = num_col * SPACE_SIDE_LENGTH
+        self.rect = pygame.Rect(position[0], position[1], self.width, self.height)
+        
+        # Field space properties
         self.space_side_length = SPACE_SIDE_LENGTH
         self.num_row = num_row
         self.num_col = num_col
+        self.num_bombs = num_bombs
         self.array_of_spaces = [[Space(False, x, y, self) for y in range(self.num_row)] for x in range(self.num_col)]
+        
+        # Game properties
         self.exploded = False
         self.won = False
         self.bombs_set = False
