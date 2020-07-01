@@ -1,9 +1,9 @@
 import pygame
 import random
 from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, BACKGROUND_COLOUR
-from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, SAVE_BUTTON_IMAGE, NEW_BUTTON_IMAGE, PLAY_BUTTON_IMAGE
+from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, RESTART_BUTTON_IMAGE, NEW_BUTTON_IMAGE, PLAY_BUTTON_IMAGE
 from config import NUMBER_OF_ROWS, NUMBER_OF_COLS, NUMBER_OF_BOMBS
-from solver import solver, get_adjacent
+from solver import solver_one_step, get_adjacent
 
 def main():
     # Game Settings
@@ -19,15 +19,16 @@ def main():
     pygame.display.set_caption("Minesweeper")
     
     # Object Setup
-    field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs)
+    field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs, SPACE_SIDE_LENGTH)
     solve_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
-    save_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SAVE_BUTTON_IMAGE, 1, 3)
+    restart_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, RESTART_BUTTON_IMAGE, 1, 3)
     new_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
 
-    # Game Mode: play, solve, end
+    # Game Modes: play, solve, end
     mode = "play"
 
     while True:
+        # wait 60 ms before querying and resolving all queued events
         pygame.time.wait(60)
 
         for event in pygame.event.get():
@@ -36,47 +37,38 @@ def main():
                 pygame.quit()
                 quit()
 
-            # Select action
+            # Event: either toggling between play/solve mode, restarting a game, starting a new game, or solving the game manually (only available in play mode)
             elif event.type == pygame.MOUSEBUTTONUP:
                 mouse_position = pygame.mouse.get_pos()
+                # solving the game manually (only when in game mode)
                 if mode == "play" and field.rect.collidepoint(mouse_position):
-                    mouse_solver(field, mouse_position, event.button)
+                    manual(field, mouse_position, event.button)
+                # toggling between play/solve mode (only when not in end mode)
                 elif mode == "play" and solve_button.rect.collidepoint(mouse_position):
                     mode = "solve"
-                    solve_button.set_button_img(PLAY_BUTTON_IMAGE)
+                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                 elif mode == "solve" and solve_button.rect.collidepoint(mouse_position):
                     mode = "play"
-                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
-                elif save_button.rect.collidepoint(mouse_position):
-                    mode = "play"
+                    solve_button.set_button_img(PLAY_BUTTON_IMAGE)
+                # restarting a game game
+                elif restart_button.rect.collidepoint(mouse_position):
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                     field.restart()
-                elif new_button.rect.collidepoint(mouse_position):
                     mode = "play"
+                # starting a new game
+                elif new_button.rect.collidepoint(mouse_position):
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                     del field
-                    field = new_game(ncol, nrow, (MARGIN, MARGIN), nbombs)
-
-        if mode == "solve":
-            solver(field)
+                    field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs, SPACE_SIDE_LENGTH)
+                    mode = "play"
         
+        # after resolving all queued events, if in solve mode, run one solve iteration
+        if mode == "solve":
+            solver_one_step(field)
+        
+        # after resolving all queued events, if the game is won or ended, set game mode to end
         if field.won or field.exploded:
             mode = "end"
-
-# Create new game
-def new_game(ncol, nrow, margin, nbombs):
-    f = Field(ncol, nrow, margin, nbombs)
-    return f
-
-# Handle mouse-field interaction
-def mouse_solver(field, mouse_position, event_button):
-    space_position_x = (mouse_position[0] - field.position[0]) // field.space_side_length
-    space_position_y = (mouse_position[1] - field.position[1]) // field.space_side_length
-    if event_button == 1:
-        field.open(space_position_x, space_position_y)
-    elif event_button == 3:
-        field.flag(space_position_x, space_position_y, False)
-    return
 
 # Calculate screen dimensions
 # Set to have one row of buttons side-by-side, assume field width is longer than the sum of all buttons' widths
@@ -84,6 +76,15 @@ def screen_dimensions(ncol, nrow, space_side_length, margin, button_height, butt
     screen_width = ncol * space_side_length + 2 * margin
     screen_height = nrow * space_side_length + 2 * margin + button_height + button_field_margin
     return (screen_width, screen_height)
+
+def manual(field, mouse_position, event_button):
+    position_x = (mouse_position[0] - field.position[0]) // field.space_side_length
+    position_y = (mouse_position[1] - field.position[1]) // field.space_side_length
+    if event_button == 1:
+        field.open(position_x, position_y)
+    elif event_button == 3:
+        field.flag(position_x, position_y, False)
+    return
 
 # TODO: set public/private functions
 class Button:
@@ -112,15 +113,15 @@ class Button:
 
 # TODO: set public/private functions
 class Field:
-    def __init__(self, num_col, num_row, position, num_bombs):
+    def __init__(self, num_col, num_row, position, num_bombs, space_side_length):
         # Field size/location
         self.position = position
-        self.height = num_row * SPACE_SIDE_LENGTH
-        self.width = num_col * SPACE_SIDE_LENGTH
+        self.height = num_row * space_side_length
+        self.width = num_col * space_side_length
         self.rect = pygame.Rect(position[0], position[1], self.width, self.height)
         
         # Field space properties
-        self.space_side_length = SPACE_SIDE_LENGTH
+        self.space_side_length = space_side_length
         self.num_row = num_row
         self.num_col = num_col
         self.num_bombs = num_bombs
