@@ -46,10 +46,10 @@ def main():
                 # toggling between play/solve mode (only when not in end mode)
                 elif mode == "play" and solve_button.rect.collidepoint(mouse_position):
                     mode = "solve"
-                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
+                    solve_button.set_button_img(PLAY_BUTTON_IMAGE)
                 elif mode == "solve" and solve_button.rect.collidepoint(mouse_position):
                     mode = "play"
-                    solve_button.set_button_img(PLAY_BUTTON_IMAGE)
+                    solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                 # restarting a game game
                 elif restart_button.rect.collidepoint(mouse_position):
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
@@ -146,7 +146,7 @@ class Field:
                 if space.opened:
                     opened.append((x, y))
                     if space.get_number() != 0:
-                        clues.append((x, y, space.get_number()))
+                        clues.append(((x, y), space.get_number()))
                 elif space.flagged:
                     flagged.append((x, y))
         return clues, opened, flagged

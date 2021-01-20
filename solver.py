@@ -22,7 +22,7 @@ def solver_one_step(field):
 
     # Process clues: mark clue_spaces in mapping to be processed
     for clue in clues:
-        mapping.process_clue(clue)
+        mapping.process_clue(clue[0], clue[1])
     
     # Mark bombs from clues(Rule 1): if the number of unopened adjacent spaces = the number of adjacent bombs, mark all adjacent unopened as bombs
     for col in mapping.field:
@@ -36,7 +36,8 @@ def solver_one_step(field):
             if space.clue_space:
                 mapping.process_clue_mark_safe(space)
     
-    # Rule 3
+    # Rule 3: for every MappingSpace marked as clue_space, add a link to Mapping, 
+    # Each link is a set of unopened, unknown spaces followed by the number of bombs that exist amonst the set of spaces
     for col in mapping.field:
         for space in col:
             if space.clue_space:
@@ -60,6 +61,8 @@ class Mapping:
         self.num_bombs = nbombs
         self.started = started
 
+    # If the game has started, open the spaces that are marked as unopened and bomb-free on the Mapping object in the playing field
+    # If the game has not started, open the space at the postion that is passed in
     def open(self, field, default):
         if not self.started:
             field.open(default[0], default[1])
@@ -71,6 +74,7 @@ class Mapping:
                         pygame.time.wait(70)
         return
 
+    # For all spaces marked as a bomb space, flag the spaces in the playing field as a bomb space
     def flag(self, field):
         for col in self.field:
             for space in col:
@@ -78,24 +82,35 @@ class Mapping:
                     field.flag(space.x, space.y, keep = True)
         return
     
+    # Given a position of a space
+    # mark the MappingSpace at that position as flagged
     def process_flagged(self, flagged_space):
         self.field[flagged_space[0]][flagged_space[1]].status_known = True
         self.field[flagged_space[0]][flagged_space[1]].value = 1
         return
     
+    # Given the position of a space
+    # mark the MappingSpace at that position as opened
     def process_opened(self, opened_space):
         self.field[opened_space[0]][opened_space[1]].opened = True
         self.field[opened_space[0]][opened_space[1]].status_known = True
         self.field[opened_space[0]][opened_space[1]].value = 0
         return       
 
-    def process_clue(self, clue):
-        space = self.field[clue[0]][clue[1]]
-        space.num_bombs = clue[2]       
+    # Given the position of and the number of bombs around an opened space
+    # update the number of bombs around a MappingSpace at the same position.
+    # if there are unopened spaces around that space
+    # then mark this space as a clue_space
+    def process_clue(self, clue_space, num_bombs):
+        space = self.field[clue_space[0]][clue_space[1]]
+        space.num_bombs = num_bombs       
         for adjacent_position in space.adjacent_positions:
             if self.field[adjacent_position[0]][adjacent_position[1]].opened == False:
                 space.clue_space = True
-
+    
+    # Given the position of an opened space
+    # if the number of bombs around that space is equal to the sum of the number of known bombs around that space and the number of unopened spaces around that space
+    # then mark all unopened MappingSpaces around the MappingSpace at the given position as a bomb space
     def process_clue_mark_bombs(self, space):
         self.update_status((space.x, space.y))
 
@@ -108,6 +123,9 @@ class Mapping:
         self.update_status((space.x, space.y))
         return
     
+    # Given the position of an opened space
+    # if the number of bombs around that space is equal to the sum of the number of known bombs around that space
+    # then mark all unopened MappingSpaces around the MappingSpace at the given position as a bomb-free space
     def process_clue_mark_safe(self, space):
         self.update_status((space.x, space.y))
 
@@ -119,7 +137,8 @@ class Mapping:
         
         self.update_status((space.x, space.y))
         return
-        
+
+    # 
     def set_links(self, space):
         self.update_status((space.x, space.y))
         if space.num_unknown_spaces == 0:
@@ -156,6 +175,7 @@ class Mapping:
 
         additionalLinks = []
 
+        #TODO: find a better way to do this
         for i1, link1 in enumerate(self.links):
             for i2, link2 in enumerate(self.links):
                 if link2.spaces.issuperset(link1.spaces):
@@ -184,6 +204,7 @@ class Mapping:
         print("end")         
         return
     
+    # Given a MappingSpace's position in the 2D array, update the MappingSpace's known number of bombs and the number of spaces with unknown status in the Mapping object
     def update_status(self, position):
         space = self.field[position[0]][position[1]]
         known_value_total = 0
@@ -200,6 +221,7 @@ class Mapping:
         return
 
 # TODO: set public/private functions
+# The smallest of clues
 class Link:
     def __init__(self, num_bombs, spaces):
         self.num_bombs = num_bombs
@@ -207,6 +229,7 @@ class Link:
         self.delete = False
 
 # TODO: set public/private functions
+# Spaces on the abstract player map
 class MappingSpace:
     def __init__(self, x, y, adjacent_positions):
         self.opened = False
@@ -220,6 +243,8 @@ class MappingSpace:
         self.known_value_total = None
         self.num_unknown_spaces = None
 
+
+# Given the dimensions of a 2D array and the position in the array, return an array of horizontally, vertically, diagonally adjacent spaces
 def get_adjacent(position_x, position_y, num_col, num_row):
     check = []
     if position_x == 0:
