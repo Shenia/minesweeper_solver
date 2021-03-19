@@ -1,6 +1,8 @@
 import pygame
 import random
 from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, BACKGROUND_COLOUR
+from config import DIALOGUE_NO_STEP, DIALOGUE_WIDTH, DIALOGUE_HEIGHT, DIALOGUE_A_HEIGHT, DIALOGUE_A_WIDTH 
+from config import DIALOGUE_OK_HEIGHT, DIALOGUE_OK_WIDTH, DIALOGUE_OK_X, DIALOGUE_OK_Y, DIALOGUE_X_HEIGHT, DIALOGUE_X_WIDTH, DIALOGUE_X_X, DIALOGUE_X_Y
 from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, RESTART_BUTTON_IMAGE, NEW_BUTTON_IMAGE, PLAY_BUTTON_IMAGE
 from config import NUMBER_OF_ROWS, NUMBER_OF_COLS, NUMBER_OF_BOMBS
 from solver import solver_one_step, get_adjacent
@@ -23,9 +25,11 @@ def main():
     solve_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
     restart_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, RESTART_BUTTON_IMAGE, 1, 3)
     new_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
+    dialogue_no_step = Dialogue(DIALOGUE_WIDTH, DIALOGUE_HEIGHT, ncol, nrow, DIALOGUE_NO_STEP, 0, 1)
 
     # Game Modes: play, solve, end
     mode = "play"
+    dialogue = False
 
     while True:
         # wait 60 ms before querying and resolving all queued events
@@ -50,7 +54,7 @@ def main():
                 elif mode == "solve" and solve_button.rect.collidepoint(mouse_position):
                     mode = "play"
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
-                # restarting a game game
+                # restarting a game
                 elif restart_button.rect.collidepoint(mouse_position):
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                     field.restart()
@@ -64,7 +68,28 @@ def main():
         
         # after resolving all queued events, if in solve mode, run one solve iteration
         if mode == "solve":
-            solver_one_step(field)
+            if field.edited or not field.bombs_set:
+                field.edited = False
+                solver_one_step(field)
+            else:
+                dialogue_no_step.display()
+                field.edited = False
+                dialogue = True
+                while dialogue:
+                    pygame.time.wait(60)
+                    for event in pygame.event.get():
+                        # Quit game
+                        if event.type == pygame.QUIT:
+                            pygame.quit()
+                            quit()
+                        elif event.type == pygame.MOUSEBUTTONUP:
+                            mouse_position = pygame.mouse.get_pos()
+                            if dialogue_no_step.x_rect.collidepoint(mouse_position):
+                                dialogue = False
+                                field.redisplay()
+                                mode = "play"
+                                solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
+            
         
         # after resolving all queued events, if the game is won or ended, set game mode to end
         if field.won or field.exploded:
@@ -86,6 +111,29 @@ def manual(field, mouse_position, event_button):
         field.flag(position_x, position_y, False)
     return
 
+class Dialogue:
+    def __init__(self, dialogue_width, dialogue_height, ncol, nrow, image, order, total):
+        self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (dialogue_width / 2)
+        self.display_y = MARGIN + ((nrow * SPACE_SIDE_LENGTH - dialogue_height) / 2)
+        self.width = dialogue_width
+        self.height = dialogue_height
+        self.image = pygame.image.load(image)
+        self.image = pygame.transform.scale(self.image, (self.width, self.height))
+        self.rect = pygame.Rect(self.display_x, self.display_y, self.width, self.height)
+
+        self.ratio_height = DIALOGUE_HEIGHT/DIALOGUE_A_HEIGHT
+        self.ratio_width = DIALOGUE_WIDTH/DIALOGUE_A_WIDTH
+        self.x_x = self.display_x + DIALOGUE_X_X * self.ratio_width
+        self.x_y = self.display_y + DIALOGUE_X_Y * self.ratio_height
+        self.x_width = DIALOGUE_X_WIDTH * self.ratio_width
+        self.x_height = DIALOGUE_X_HEIGHT * self.ratio_height
+        self.x_rect = pygame.Rect(self.x_x, self.x_y, self.x_width, self.x_height)
+    
+    def display(self):
+        gameDisplay.blit(self.image, (self.display_x, self.display_y))
+        pygame.display.update(self.rect)
+        return
+    
 # TODO: set public/private functions
 class Button:
     def __init__(self, button_width, button_height, ncol, nrow, image, order, total):
@@ -128,10 +176,16 @@ class Field:
         self.array_of_spaces = [[Space(False, x, y, self) for y in range(self.num_row)] for x in range(self.num_col)]
         
         # Game properties
+        self.edited = False
         self.exploded = False
         self.won = False
         self.bombs_set = False
 
+    def redisplay(self): 
+        for x in range(self.num_col):
+            for y in range(self.num_row):
+                self.array_of_spaces[x][y].set_image_update()
+                
     # Accessible by solver
     def get_field_info(self):
         return (self.num_row, self.num_col, self.num_bombs, self.bombs_set)
@@ -165,6 +219,7 @@ class Field:
 
     # Open the space at position_x, position_y
     def open(self, position_x, position_y):
+        self.edited = True
         # If game hasn't started, set bombs
         if self.bombs_set == False:
             self.bombs_set = True
@@ -245,7 +300,12 @@ class Space:
         # Player/solver toggle
         self.opened = False
         self.flagged = False
-    
+
+    def set_image_update(self):
+        gameDisplay.blit(self.image, (self.display_x, self.display_y))
+        rect = pygame.Rect(self.display_x, self.display_y, self.side_length, self.side_length)
+        pygame.display.update(rect)
+
     # Set and display image
     def set_image(self, image_path):
         self.image = pygame.image.load(image_path)
