@@ -14,7 +14,10 @@ SOLVE_BUTTON_IMAGE = "img/solve_button.png"
 PLAY_BUTTON_IMAGE = "img/play_button.png"
 RESTART_BUTTON_IMAGE = "img/save_button.png"
 NEW_BUTTON_IMAGE = "img/new_button.png"
+
 DIALOGUE_NO_STEP = "img/dialogue_no_step.png"
+DIALOGUE_WON = "img/dialogue_win.png"
+DIALOGUE_LOST = "img/dialogue_lose.png"
 DIALOGUE_WIDTH = 250
 DIALOGUE_HEIGHT = 125
 DIALOGUE_A_WIDTH = 521
@@ -27,7 +30,6 @@ DIALOGUE_X_X = 459
 DIALOGUE_X_Y = 8
 DIALOGUE_X_HEIGHT = 55
 DIALOGUE_X_WIDTH = 55
-
 
 NUMBER_OF_ROWS = 15 
 NUMBER_OF_COLS = 15 

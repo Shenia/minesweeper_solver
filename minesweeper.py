@@ -1,7 +1,7 @@
 import pygame
 import random
 from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, BACKGROUND_COLOUR
-from config import DIALOGUE_NO_STEP, DIALOGUE_WIDTH, DIALOGUE_HEIGHT, DIALOGUE_A_HEIGHT, DIALOGUE_A_WIDTH 
+from config import DIALOGUE_NO_STEP, DIALOGUE_WON, DIALOGUE_LOST, DIALOGUE_WIDTH, DIALOGUE_HEIGHT, DIALOGUE_A_HEIGHT, DIALOGUE_A_WIDTH 
 from config import DIALOGUE_OK_HEIGHT, DIALOGUE_OK_WIDTH, DIALOGUE_OK_X, DIALOGUE_OK_Y, DIALOGUE_X_HEIGHT, DIALOGUE_X_WIDTH, DIALOGUE_X_X, DIALOGUE_X_Y
 from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, RESTART_BUTTON_IMAGE, NEW_BUTTON_IMAGE, PLAY_BUTTON_IMAGE
 from config import NUMBER_OF_ROWS, NUMBER_OF_COLS, NUMBER_OF_BOMBS
@@ -12,11 +12,16 @@ def main():
     nrow = NUMBER_OF_ROWS
     ncol = NUMBER_OF_COLS
     nbombs = NUMBER_OF_BOMBS
+    margin = MARGIN
+    space_side_length = SPACE_SIDE_LENGTH
     
     # Window Setup
-    pygame.init() 
-    global gameDisplay 
-    gameDisplay = pygame.display.set_mode(screen_dimensions(ncol, nrow, SPACE_SIDE_LENGTH, MARGIN, BUTTON_HEIGHT, BUTTON_FIELD_MARGIN))
+    pygame.init()
+    global gameDisplay
+    screen_size = screen_dimensions(ncol, nrow, SPACE_SIDE_LENGTH, MARGIN, BUTTON_HEIGHT, BUTTON_FIELD_MARGIN)
+    field_position = (margin, margin)
+    field_size = (nrow * space_side_length, ncol * space_side_length)
+    gameDisplay = pygame.display.set_mode(screen_size)
     gameDisplay.fill(BACKGROUND_COLOUR)
     pygame.display.set_caption("Minesweeper")
     
@@ -25,7 +30,9 @@ def main():
     solve_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
     restart_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, RESTART_BUTTON_IMAGE, 1, 3)
     new_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
-    dialogue_no_step = Dialogue(DIALOGUE_WIDTH, DIALOGUE_HEIGHT, ncol, nrow, DIALOGUE_NO_STEP, 0, 1)
+    dialogue_no_step = Dialogue(DIALOGUE_WIDTH, DIALOGUE_HEIGHT, field_position, field_size, DIALOGUE_NO_STEP)
+    dialogue_won = Dialogue(DIALOGUE_WIDTH, DIALOGUE_HEIGHT, field_position, field_size, DIALOGUE_WON)
+    dialogue_lost = Dialogue(DIALOGUE_WIDTH, DIALOGUE_HEIGHT, field_position, field_size, DIALOGUE_LOST)
 
     # Game Modes: play, solve, end
     mode = "play"
@@ -73,7 +80,6 @@ def main():
                 solver_one_step(field)
             else:
                 dialogue_no_step.display()
-                field.edited = False
                 dialogue = True
                 while dialogue:
                     pygame.time.wait(60)
@@ -90,10 +96,26 @@ def main():
                                 mode = "play"
                                 solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
             
-        
         # after resolving all queued events, if the game is won or ended, set game mode to end
-        if field.won or field.exploded:
-            mode = "end"
+        if mode != "end" and (field.won or field.exploded):
+            if field.won:
+                dialogue_won.display()
+            else:
+                dialogue_lost.display()
+            dialogue = True
+            while dialogue:
+                pygame.time.wait(60)
+                for event in pygame.event.get():
+                    # Quit game
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        quit()
+                    elif event.type == pygame.MOUSEBUTTONUP:
+                        mouse_position = pygame.mouse.get_pos()
+                        if dialogue_no_step.x_rect.collidepoint(mouse_position):
+                            mode = "end"
+                            dialogue = False
+                            field.redisplay()
 
 # Calculate screen dimensions
 # Set to have one row of buttons side-by-side, assume field width is longer than the sum of all buttons' widths
@@ -112,9 +134,9 @@ def manual(field, mouse_position, event_button):
     return
 
 class Dialogue:
-    def __init__(self, dialogue_width, dialogue_height, ncol, nrow, image, order, total):
-        self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (dialogue_width / 2)
-        self.display_y = MARGIN + ((nrow * SPACE_SIDE_LENGTH - dialogue_height) / 2)
+    def __init__(self, dialogue_width, dialogue_height, field_position, field_size, image):
+        self.display_x = ((field_size[0] - dialogue_width) / 2) + field_position[0]
+        self.display_y = ((field_size[1] - dialogue_height) / 2) + field_position[1]
         self.width = dialogue_width
         self.height = dialogue_height
         self.image = pygame.image.load(image)
@@ -209,6 +231,7 @@ class Field:
     def restart(self):
         self.exploded = False
         self.won = False
+        self.edited = False
         for col in self.array_of_spaces:
             for space in col:
                 space.opened = False
