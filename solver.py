@@ -71,6 +71,8 @@ class Mapping:
                 for space in col:
                     if space.status_known and space.opened == False and space.value == 0:
                         field.open(space.x, space.y)
+                        if field.exploded:
+                            return
                         pygame.time.wait(70)
         return
 
