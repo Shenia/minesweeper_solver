@@ -13,8 +13,6 @@ from solver import solver_one_step, get_adjacent
 
 def main():
     # Game Settings
-    nrow = NUMBER_OF_ROWS
-    ncol = NUMBER_OF_COLS
     nbombs = NUMBER_OF_BOMBS
     margin = MARGIN
     space_side_length = SPACE_SIDE_LENGTH
@@ -25,10 +23,18 @@ def main():
     button_field_margin = BUTTON_FIELD_MARGIN
     background_colour = BACKGROUND_COLOUR
 
+    # Dialogue Resolution
+    dialogue_ratio_height = DIALOGUE_HEIGHT/DIALOGUE_A_HEIGHT
+    dialogue_ratio_width = DIALOGUE_WIDTH/DIALOGUE_A_WIDTH
+    dialogue_x_position = (DIALOGUE_X_X * dialogue_ratio_width, DIALOGUE_X_Y * dialogue_ratio_height)
+    dialogue_x_size = (DIALOGUE_X_WIDTH * dialogue_ratio_width, DIALOGUE_X_HEIGHT * dialogue_ratio_height)
+    dialogue_ok_position = (DIALOGUE_OK_X * dialogue_ratio_width, DIALOGUE_OK_Y * dialogue_ratio_height)
+    dialogue_ok_size = (DIALOGUE_OK_WIDTH * dialogue_ratio_width, DIALOGUE_OK_HEIGHT * dialogue_ratio_height)
+
     # Window Setup
     pygame.init()
     global gameDisplay
-    screen_size = screen_dimensions(ncol, nrow, space_side_length, margin, button_height, button_field_margin)
+    screen_size = screen_dimensions(NUMBER_OF_COLS, NUMBER_OF_ROWS, space_side_length, margin, button_height, button_field_margin)
     field_position = (margin, margin)
     space_size = (space_side_length, space_side_length)
     button_size = (button_width, button_height)
@@ -38,12 +44,16 @@ def main():
     pygame.display.set_caption("Minesweeper")
     
     # Object Setup
-    field = Field(ncol, nrow, field_position, nbombs, space_side_length)
-    solve_button = Button(button_size, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
-    restart_button = Button(button_size, ncol, nrow, RESTART_BUTTON_IMAGE, 1, 3)
-    new_button = Button(button_size, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
-    dialogue = Dialogue(dialogue_size, field_position, field.get_size())
+    field = Field(NUMBER_OF_COLS, NUMBER_OF_ROWS, field_position, nbombs, space_side_length)
+    solve_button = Button(button_size, screen_size, SOLVE_BUTTON_IMAGE, 0, 3)
+    restart_button = Button(button_size, screen_size, RESTART_BUTTON_IMAGE, 1, 3)
+    new_button = Button(button_size, screen_size, NEW_BUTTON_IMAGE, 2, 3)
+    dialogue = Dialogue(dialogue_size, field_position, field.get_size(), dialogue_x_position, dialogue_x_size, dialogue_ok_position, dialogue_ok_size)
 
+    # Check Collision
+    # gameDisplay.fill(background_colour, rect=dialogue.ok_rect)
+    # pygame.display.update(dialogue.ok_rect)
+    
     # Game Modes: play, solve, dialogue, end
     mode = "play"
 
@@ -79,7 +89,7 @@ def main():
                 elif new_button.rect.collidepoint(mouse_position):
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
                     del field
-                    field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs, SPACE_SIDE_LENGTH)
+                    field = Field(NUMBER_OF_COLS, NUMBER_OF_ROWS, (MARGIN, MARGIN), nbombs, SPACE_SIDE_LENGTH)
                     mode = "play"
         
         # after resolving all queued events, if in solve mode, run one solve iteration
@@ -142,26 +152,23 @@ def manual(field, mouse_position, event_button):
     return
 
 class Dialogue:
-    def __init__(self, dialogue_size, field_position, field_size):
+    def __init__(self, dialogue_size, field_position, field_size, dialogue_x_position, dialogue_x_size, dialogue_ok_position, dialogue_ok_size):
         self.display_x = ((field_size[0] - dialogue_size[0]) / 2) + field_position[0]
         self.display_y = ((field_size[1] - dialogue_size[1]) / 2) + field_position[1]
         self.width = dialogue_size[0]
         self.height = dialogue_size[1]
         self.rect = pygame.Rect(self.display_x, self.display_y, self.width, self.height)
 
-        self.ratio_height = DIALOGUE_HEIGHT/DIALOGUE_A_HEIGHT
-        self.ratio_width = DIALOGUE_WIDTH/DIALOGUE_A_WIDTH
-
-        self.x_x = self.display_x + DIALOGUE_X_X * self.ratio_width
-        self.x_y = self.display_y + DIALOGUE_X_Y * self.ratio_height
-        self.x_width = DIALOGUE_X_WIDTH * self.ratio_width
-        self.x_height = DIALOGUE_X_HEIGHT * self.ratio_height
+        self.x_x = self.display_x + dialogue_x_position[0]
+        self.x_y = self.display_y + dialogue_x_position[1]
+        self.x_width = dialogue_x_size[0]
+        self.x_height = dialogue_x_size[1]
         self.x_rect = pygame.Rect(self.x_x, self.x_y, self.x_width, self.x_height)
 
-        self.ok_x = self.display_x + DIALOGUE_OK_X * self.ratio_width
-        self.ok_y = self.display_y + DIALOGUE_OK_Y * self.ratio_height
-        self.ok_width = DIALOGUE_OK_WIDTH * self.ratio_width
-        self.ok_height = DIALOGUE_OK_HEIGHT * self.ratio_height
+        self.ok_x = self.display_x + dialogue_ok_position[0]
+        self.ok_y = self.display_y + dialogue_ok_position[1]
+        self.ok_width = dialogue_ok_size[0]
+        self.ok_height = dialogue_ok_size[1]
         self.ok_rect = pygame.Rect(self.ok_x, self.ok_y, self.ok_width, self.ok_height)
     
     def display(self, image):
@@ -172,9 +179,9 @@ class Dialogue:
     
 # TODO: set public/private functions
 class Button:
-    def __init__(self, button_size, ncol, nrow, image, order, total):
-        self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (button_size[0] / 2)
-        self.display_y = MARGIN + nrow * SPACE_SIDE_LENGTH + BUTTON_FIELD_MARGIN
+    def __init__(self, button_size, screen_size, image, order, total):
+        self.display_x = (screen_size[0] / (total + 1)) * (order + 1) - (button_size[0] / 2)
+        self.display_y = screen_size[1] - button_size[1] - MARGIN
         self.width = button_size[0]
         self.height = button_size[1]
         self.image = pygame.image.load(image)
