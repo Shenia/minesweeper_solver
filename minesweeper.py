@@ -13,11 +13,6 @@ from solver import solver_one_step, get_adjacent
 
 def main():
     # Game Settings
-    nbombs = NUMBER_OF_BOMBS
-    margin = MARGIN
-    space_side_length = SPACE_SIDE_LENGTH
-    dialogue_width = DIALOGUE_WIDTH
-    dialogue_height = DIALOGUE_HEIGHT
     button_width = BUTTON_WIDTH
     button_height = BUTTON_HEIGHT
     button_field_margin = BUTTON_FIELD_MARGIN
@@ -34,17 +29,17 @@ def main():
     # Window Setup
     pygame.init()
     global gameDisplay
-    screen_size = screen_dimensions(NUMBER_OF_COLS, NUMBER_OF_ROWS, space_side_length, margin, button_height, button_field_margin)
-    field_position = (margin, margin)
-    space_size = (space_side_length, space_side_length)
+    screen_size = screen_dimensions(NUMBER_OF_COLS, NUMBER_OF_ROWS, SPACE_SIDE_LENGTH, MARGIN, button_height, button_field_margin)
+    field_position = (MARGIN, MARGIN)
+    space_size = (SPACE_SIDE_LENGTH, SPACE_SIDE_LENGTH)
     button_size = (button_width, button_height)
-    dialogue_size = (dialogue_width, dialogue_height)
+    dialogue_size = (DIALOGUE_WIDTH, DIALOGUE_HEIGHT)
     gameDisplay = pygame.display.set_mode(screen_size)
     gameDisplay.fill(background_colour)
     pygame.display.set_caption("Minesweeper")
     
     # Object Setup
-    field = Field(NUMBER_OF_COLS, NUMBER_OF_ROWS, field_position, nbombs, space_side_length)
+    field = Field(NUMBER_OF_COLS, NUMBER_OF_ROWS, field_position, NUMBER_OF_BOMBS, SPACE_SIDE_LENGTH)
     solve_button = Button(button_size, screen_size, SOLVE_BUTTON_IMAGE, 0, 3)
     restart_button = Button(button_size, screen_size, RESTART_BUTTON_IMAGE, 1, 3)
     new_button = Button(button_size, screen_size, NEW_BUTTON_IMAGE, 2, 3)
@@ -88,8 +83,7 @@ def main():
                 # starting a new game
                 elif new_button.rect.collidepoint(mouse_position):
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
-                    del field
-                    field = Field(NUMBER_OF_COLS, NUMBER_OF_ROWS, (MARGIN, MARGIN), nbombs, SPACE_SIDE_LENGTH)
+                    field = Field(NUMBER_OF_COLS, NUMBER_OF_ROWS, field_position, NUMBER_OF_BOMBS, SPACE_SIDE_LENGTH)
                     mode = "play"
         
         # after resolving all queued events, if in solve mode, run one solve iteration
