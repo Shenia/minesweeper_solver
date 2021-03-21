@@ -1,10 +1,14 @@
 import pygame
 import random
-from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN, SPACE_SIDE_LENGTH, BACKGROUND_COLOUR
-from config import DIALOGUE_NO_STEP, DIALOGUE_WON, DIALOGUE_LOST, DIALOGUE_WIDTH, DIALOGUE_HEIGHT, DIALOGUE_A_HEIGHT, DIALOGUE_A_WIDTH 
-from config import DIALOGUE_OK_HEIGHT, DIALOGUE_OK_WIDTH, DIALOGUE_OK_X, DIALOGUE_OK_Y, DIALOGUE_X_HEIGHT, DIALOGUE_X_WIDTH, DIALOGUE_X_X, DIALOGUE_X_Y
-from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN, SOLVE_BUTTON_IMAGE, RESTART_BUTTON_IMAGE, NEW_BUTTON_IMAGE, PLAY_BUTTON_IMAGE
+from config import BACKGROUND_COLOUR
 from config import NUMBER_OF_ROWS, NUMBER_OF_COLS, NUMBER_OF_BOMBS
+from config import IMAGE_DICTIONARY, FLAGGED_IMAGE, BOMB_IMAGE, INITIAL_IMAGE, MARGIN
+from config import SPACE_SIDE_LENGTH
+from config import DIALOGUE_NO_STEP, DIALOGUE_WON, DIALOGUE_LOST
+from config import DIALOGUE_WIDTH, DIALOGUE_HEIGHT, DIALOGUE_A_HEIGHT, DIALOGUE_A_WIDTH 
+from config import DIALOGUE_OK_HEIGHT, DIALOGUE_OK_WIDTH, DIALOGUE_OK_X, DIALOGUE_OK_Y, DIALOGUE_X_HEIGHT, DIALOGUE_X_WIDTH, DIALOGUE_X_X, DIALOGUE_X_Y
+from config import SOLVE_BUTTON_IMAGE, RESTART_BUTTON_IMAGE, NEW_BUTTON_IMAGE, PLAY_BUTTON_IMAGE, DISABLED_BUTTON_IMAGE
+from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN
 from solver import solver_one_step, get_adjacent
 
 def main():
@@ -14,29 +18,34 @@ def main():
     nbombs = NUMBER_OF_BOMBS
     margin = MARGIN
     space_side_length = SPACE_SIDE_LENGTH
-    
+    dialogue_width = DIALOGUE_WIDTH
+    dialogue_height = DIALOGUE_HEIGHT
+    button_width = BUTTON_WIDTH
+    button_height = BUTTON_HEIGHT
+    button_field_margin = BUTTON_FIELD_MARGIN
+    background_colour = BACKGROUND_COLOUR
+
     # Window Setup
     pygame.init()
     global gameDisplay
-    screen_size = screen_dimensions(ncol, nrow, SPACE_SIDE_LENGTH, MARGIN, BUTTON_HEIGHT, BUTTON_FIELD_MARGIN)
+    screen_size = screen_dimensions(ncol, nrow, space_side_length, margin, button_height, button_field_margin)
     field_position = (margin, margin)
-    field_size = (nrow * space_side_length, ncol * space_side_length)
+    space_size = (space_side_length, space_side_length)
+    button_size = (button_width, button_height)
+    dialogue_size = (dialogue_width, dialogue_height)
     gameDisplay = pygame.display.set_mode(screen_size)
-    gameDisplay.fill(BACKGROUND_COLOUR)
+    gameDisplay.fill(background_colour)
     pygame.display.set_caption("Minesweeper")
     
     # Object Setup
-    field = Field(ncol, nrow, (MARGIN, MARGIN), nbombs, SPACE_SIDE_LENGTH)
-    solve_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
-    restart_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, RESTART_BUTTON_IMAGE, 1, 3)
-    new_button = Button(BUTTON_WIDTH, BUTTON_HEIGHT, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
-    dialogue_no_step = Dialogue(DIALOGUE_WIDTH, DIALOGUE_HEIGHT, field_position, field_size, DIALOGUE_NO_STEP)
-    dialogue_won = Dialogue(DIALOGUE_WIDTH, DIALOGUE_HEIGHT, field_position, field_size, DIALOGUE_WON)
-    dialogue_lost = Dialogue(DIALOGUE_WIDTH, DIALOGUE_HEIGHT, field_position, field_size, DIALOGUE_LOST)
+    field = Field(ncol, nrow, field_position, nbombs, space_side_length)
+    solve_button = Button(button_size, ncol, nrow, SOLVE_BUTTON_IMAGE, 0, 3)
+    restart_button = Button(button_size, ncol, nrow, RESTART_BUTTON_IMAGE, 1, 3)
+    new_button = Button(button_size, ncol, nrow, NEW_BUTTON_IMAGE, 2, 3)
+    dialogue = Dialogue(dialogue_size, field_position, field.get_size())
 
-    # Game Modes: play, solve, end
+    # Game Modes: play, solve, dialogue, end
     mode = "play"
-    dialogue = False
 
     while True:
         # wait 60 ms before querying and resolving all queued events
@@ -79,9 +88,9 @@ def main():
                 field.edited = False
                 solver_one_step(field)
             else:
-                dialogue_no_step.display()
-                dialogue = True
-                while dialogue:
+                dialogue.display(DIALOGUE_NO_STEP)
+                mode = "dialogue"
+                while mode == "dialogue":
                     pygame.time.wait(60)
                     for event in pygame.event.get():
                         # Quit game
@@ -90,20 +99,19 @@ def main():
                             quit()
                         elif event.type == pygame.MOUSEBUTTONUP:
                             mouse_position = pygame.mouse.get_pos()
-                            if dialogue_no_step.x_rect.collidepoint(mouse_position):
-                                dialogue = False
+                            if dialogue.x_rect.collidepoint(mouse_position) or dialogue.ok_rect.collidepoint(mouse_position):
                                 field.redisplay()
                                 mode = "play"
                                 solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
             
         # after resolving all queued events, if the game is won or ended, set game mode to end
-        if mode != "end" and (field.won or field.exploded):
+        if (mode == "solve" or mode == "play") and (field.won or field.exploded):
             if field.won:
-                dialogue_won.display()
+                dialogue.display(DIALOGUE_WON)
             else:
-                dialogue_lost.display()
-            dialogue = True
-            while dialogue:
+                dialogue.display(DIALOGUE_LOST)
+            mode = "dialogue"
+            while mode == "dialogue":
                 pygame.time.wait(60)
                 for event in pygame.event.get():
                     # Quit game
@@ -112,9 +120,9 @@ def main():
                         quit()
                     elif event.type == pygame.MOUSEBUTTONUP:
                         mouse_position = pygame.mouse.get_pos()
-                        if dialogue_no_step.x_rect.collidepoint(mouse_position):
+                        if dialogue.x_rect.collidepoint(mouse_position) or dialogue.ok_rect.collidepoint(mouse_position):
                             mode = "end"
-                            dialogue = False
+                            solve_button.set_button_img(DISABLED_BUTTON_IMAGE)
                             field.redisplay()
 
 # Calculate screen dimensions
@@ -130,39 +138,45 @@ def manual(field, mouse_position, event_button):
     if event_button == 1:
         field.open(position_x, position_y)
     elif event_button == 3:
-        field.flag(position_x, position_y, False)
+        field.flag(position_x, position_y)
     return
 
 class Dialogue:
-    def __init__(self, dialogue_width, dialogue_height, field_position, field_size, image):
-        self.display_x = ((field_size[0] - dialogue_width) / 2) + field_position[0]
-        self.display_y = ((field_size[1] - dialogue_height) / 2) + field_position[1]
-        self.width = dialogue_width
-        self.height = dialogue_height
-        self.image = pygame.image.load(image)
-        self.image = pygame.transform.scale(self.image, (self.width, self.height))
+    def __init__(self, dialogue_size, field_position, field_size):
+        self.display_x = ((field_size[0] - dialogue_size[0]) / 2) + field_position[0]
+        self.display_y = ((field_size[1] - dialogue_size[1]) / 2) + field_position[1]
+        self.width = dialogue_size[0]
+        self.height = dialogue_size[1]
         self.rect = pygame.Rect(self.display_x, self.display_y, self.width, self.height)
 
         self.ratio_height = DIALOGUE_HEIGHT/DIALOGUE_A_HEIGHT
         self.ratio_width = DIALOGUE_WIDTH/DIALOGUE_A_WIDTH
+
         self.x_x = self.display_x + DIALOGUE_X_X * self.ratio_width
         self.x_y = self.display_y + DIALOGUE_X_Y * self.ratio_height
         self.x_width = DIALOGUE_X_WIDTH * self.ratio_width
         self.x_height = DIALOGUE_X_HEIGHT * self.ratio_height
         self.x_rect = pygame.Rect(self.x_x, self.x_y, self.x_width, self.x_height)
+
+        self.ok_x = self.display_x + DIALOGUE_OK_X * self.ratio_width
+        self.ok_y = self.display_y + DIALOGUE_OK_Y * self.ratio_height
+        self.ok_width = DIALOGUE_OK_WIDTH * self.ratio_width
+        self.ok_height = DIALOGUE_OK_HEIGHT * self.ratio_height
+        self.ok_rect = pygame.Rect(self.ok_x, self.ok_y, self.ok_width, self.ok_height)
     
-    def display(self):
-        gameDisplay.blit(self.image, (self.display_x, self.display_y))
+    def display(self, image):
+        display_image = pygame.transform.scale(pygame.image.load(image), (self.width, self.height))
+        gameDisplay.blit(display_image, (self.display_x, self.display_y))
         pygame.display.update(self.rect)
         return
     
 # TODO: set public/private functions
 class Button:
-    def __init__(self, button_width, button_height, ncol, nrow, image, order, total):
-        self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (button_width / 2)
+    def __init__(self, button_size, ncol, nrow, image, order, total):
+        self.display_x = ((ncol * SPACE_SIDE_LENGTH + 2 * MARGIN) / (total + 1)) * (order + 1) - (button_size[0] / 2)
         self.display_y = MARGIN + nrow * SPACE_SIDE_LENGTH + BUTTON_FIELD_MARGIN
-        self.width = button_width
-        self.height = button_height
+        self.width = button_size[0]
+        self.height = button_size[1]
         self.image = pygame.image.load(image)
         self.image = pygame.transform.scale(self.image, (self.width, self.height))
         self.rect = pygame.Rect(self.display_x, self.display_y, self.width, self.height)
@@ -196,6 +210,7 @@ class Field:
         self.num_col = num_col
         self.num_bombs = num_bombs
         self.array_of_spaces = [[Space(False, x, y, self) for y in range(self.num_row)] for x in range(self.num_col)]
+        self.redisplay()
         
         # Game properties
         self.edited = False
@@ -203,10 +218,14 @@ class Field:
         self.won = False
         self.bombs_set = False
 
+    def get_size(self):
+        return (self.width, self.height)
+
     def redisplay(self): 
         for x in range(self.num_col):
             for y in range(self.num_row):
-                self.array_of_spaces[x][y].set_image_update()
+                self.array_of_spaces[x][y].field_redisplay()
+        pygame.display.update(self.rect)
                 
     # Accessible by solver
     def get_field_info(self):
@@ -236,8 +255,9 @@ class Field:
             for space in col:
                 space.opened = False
                 space.flagged = False
-                space.explosion_reached = False
+                space.exploded = False
                 space.set_image(INITIAL_IMAGE)
+        self.redisplay()
         return
 
     # Open the space at position_x, position_y
@@ -251,13 +271,9 @@ class Field:
         # Open the space at position_x, position_y
         #TODO: add winning sequence
         self.array_of_spaces[position_x][position_y].open()
-        # Determine if game is lost
-        if self.exploded == True:
-            print("exploded")
         # Determine if game is won
         if self.num_bombs == self.get_unopened() and self.exploded != True:
             self.won = True
-            print("win")
         return
 
     # Return the number of unopened spaces
@@ -272,8 +288,8 @@ class Field:
     # Flag the space
     # If keep and the space is already flagged, then the space continues to stay flagged
     # Else if not keep and the space is already flagged, then the space is unflagged
-    def flag(self, position_x, position_y, keep):
-        self.array_of_spaces[position_x][position_y].flag(keep)
+    def flag(self, position_x, position_y):
+        self.array_of_spaces[position_x][position_y].flag()
 
     # Randomly plant bombs
     # The position passed in and the positions immediately adjacent to it will not contain bombs
@@ -312,11 +328,12 @@ class Space:
         self.side_length = self.field.space_side_length
         self.display_x = self.field.position[0] + self.position_x * self.side_length
         self.display_y = self.field.position[1] + self.position_y * self.side_length
+        self.rect = pygame.Rect(self.display_x, self.display_y, self.side_length, self.side_length)
         self.set_image(INITIAL_IMAGE)
                 
         # Game properties
         self.has_mine = has_mine
-        self.explosion_reached = False
+        self.exploded = False
         # TODO: change positions to space pointers
         self.adjacent_space_positions = get_adjacent(self.position_x, self.position_y, self.field.num_col, self.field.num_row)
 
@@ -324,47 +341,43 @@ class Space:
         self.opened = False
         self.flagged = False
 
-    def set_image_update(self):
+    def field_redisplay(self):
         gameDisplay.blit(self.image, (self.display_x, self.display_y))
-        rect = pygame.Rect(self.display_x, self.display_y, self.side_length, self.side_length)
-        pygame.display.update(rect)
 
     # Set and display image
     def set_image(self, image_path):
         self.image = pygame.image.load(image_path)
         self.image = pygame.transform.scale(self.image, (self.side_length, self.side_length))        
-        gameDisplay.blit(self.image, (self.display_x, self.display_y))
-        rect = pygame.Rect(self.display_x, self.display_y, self.side_length, self.side_length)
-        pygame.display.update(rect)
     
-    # Explode self, add adjacent spaces to explosion queue
-    # TODO: rewrite explosion function (move to field)
-    def explosion(self, queue):
-        self.explode()
-        for adjacent_space_position in self.adjacent_space_positions:
-            if self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].explosion_reached == False and adjacent_space_position not in queue:
-                queue.append(adjacent_space_position)
-        return queue
-
+    def display(self):
+        gameDisplay.blit(self.image, (self.display_x, self.display_y))
+        pygame.display.update(self.rect)
+    
     # Any space can explode
-    def explode(self):
-        self.explosion_reached = True
-        if self.has_mine:
-            self.set_image(BOMB_IMAGE)
-            pygame.time.wait(100)
+    def explode(self, queue):
+        newQueue = []
+        for position in queue:
+            space = self.field.array_of_spaces[position[0]][position[1]]
+            space.exploded = True
+            if space.has_mine:
+                space.set_image(BOMB_IMAGE)
+                space.display()
+                # pygame.time.wait(50)
+            for adjacent_space_position in space.adjacent_space_positions:
+                if space.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].exploded == False and adjacent_space_position not in newQueue:
+                    newQueue.append(adjacent_space_position)
+        pygame.time.wait(100)
+        if len(newQueue) != 0:
+            self.explode(newQueue)
+        return
 
     # Open space, accessed through field
     def open(self):
         if self.opened or self.flagged:
             return
         elif self.has_mine:
-            self.opened = True
-            self.flagged = False
             self.field.exploded = True
-            queue = self.explosion([])
-            while queue:
-                position = queue.pop(0)
-                queue = self.field.array_of_spaces[position[0]][position[1]].explosion(queue)
+            self.explode([(self.position_x, self.position_y)])
             return
         else:
             self.opened = True
@@ -372,30 +385,31 @@ class Space:
             num_mines = self.get_number()
             if num_mines == 0:
                 self.set_image(IMAGE_DICTIONARY[0])
+                self.display()
                 for adjacent_space_position in self.adjacent_space_positions:
                     if self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].opened == False and self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].has_mine == False:
                         self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].open()
                 return 
             elif num_mines >= 1 and num_mines <= 8:
                 self.set_image(IMAGE_DICTIONARY[num_mines])
+                self.display()
                 return   
     
     # Flag space, accessed through field. 
     # If keep and the space is already flagged, then the space continues to stay flagged
     # Else if not keep and the space is already flagged, then the space is unflagged
-    def flag(self, keep):
+    def flag(self):
         if self.opened:
             return
-        elif keep and self.flagged:
-            return
-        elif keep == False and self.flagged:
+        elif self.flagged:
             self.flagged = False
             self.set_image(INITIAL_IMAGE)
+            self.display()
             return
         else:
             self.flagged = True
             self.set_image(FLAGGED_IMAGE)
-            pygame.time.wait(70)
+            self.display()
             return
 
     # Get the number of mines in adjacent spaces

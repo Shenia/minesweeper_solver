@@ -78,13 +78,15 @@ class Mapping:
     def flag(self, field):
         for col in self.field:
             for space in col:
-                if space.status_known and space.value == 1:
-                    field.flag(space.x, space.y, keep = True)
+                if space.status_known and space.flagged == False and space.value == 1:
+                    field.flag(space.x, space.y)
+                    pygame.time.wait(70)
         return
     
     # Given a position of a space
     # mark the MappingSpace at that position as flagged
     def process_flagged(self, flagged_space):
+        self.field[flagged_space[0]][flagged_space[1]].flagged = True
         self.field[flagged_space[0]][flagged_space[1]].status_known = True
         self.field[flagged_space[0]][flagged_space[1]].value = 1
         return
@@ -233,6 +235,7 @@ class Link:
 class MappingSpace:
     def __init__(self, x, y, adjacent_positions):
         self.opened = False
+        self.flagged = False
         self.status_known = False
         self.value = None
         self.x = x

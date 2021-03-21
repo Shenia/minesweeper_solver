@@ -14,6 +14,7 @@ SOLVE_BUTTON_IMAGE = "img/solve_button.png"
 PLAY_BUTTON_IMAGE = "img/play_button.png"
 RESTART_BUTTON_IMAGE = "img/save_button.png"
 NEW_BUTTON_IMAGE = "img/new_button.png"
+DISABLED_BUTTON_IMAGE = "img/disabled_button.png"
 
 DIALOGUE_NO_STEP = "img/dialogue_no_step.png"
 DIALOGUE_WON = "img/dialogue_win.png"
