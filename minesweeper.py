@@ -12,12 +12,6 @@ from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN
 from solver import solver_one_step, get_adjacent
 
 def main():
-    # Game Settings
-    button_width = BUTTON_WIDTH
-    button_height = BUTTON_HEIGHT
-    button_field_margin = BUTTON_FIELD_MARGIN
-    background_colour = BACKGROUND_COLOUR
-
     # Dialogue Resolution
     dialogue_ratio_height = DIALOGUE_HEIGHT/DIALOGUE_A_HEIGHT
     dialogue_ratio_width = DIALOGUE_WIDTH/DIALOGUE_A_WIDTH
@@ -29,13 +23,13 @@ def main():
     # Window Setup
     pygame.init()
     global gameDisplay
-    screen_size = screen_dimensions(NUMBER_OF_COLS, NUMBER_OF_ROWS, SPACE_SIDE_LENGTH, MARGIN, button_height, button_field_margin)
+    screen_size = screen_dimensions(NUMBER_OF_COLS, NUMBER_OF_ROWS, SPACE_SIDE_LENGTH, MARGIN, BUTTON_HEIGHT, BUTTON_FIELD_MARGIN)
     field_position = (MARGIN, MARGIN)
     space_size = (SPACE_SIDE_LENGTH, SPACE_SIDE_LENGTH)
-    button_size = (button_width, button_height)
+    button_size = (BUTTON_WIDTH, BUTTON_HEIGHT)
     dialogue_size = (DIALOGUE_WIDTH, DIALOGUE_HEIGHT)
     gameDisplay = pygame.display.set_mode(screen_size)
-    gameDisplay.fill(background_colour)
+    gameDisplay.fill(BACKGROUND_COLOUR)
     pygame.display.set_caption("Minesweeper")
     
     # Object Setup
@@ -46,7 +40,7 @@ def main():
     dialogue = Dialogue(dialogue_size, field_position, field.get_size(), dialogue_x_position, dialogue_x_size, dialogue_ok_position, dialogue_ok_size)
 
     # Check Collision
-    # gameDisplay.fill(background_colour, rect=dialogue.ok_rect)
+    # gameDisplay.fill(BACKGROUND_COLOUR, rect=dialogue.ok_rect)
     # pygame.display.update(dialogue.ok_rect)
     
     # Game Modes: play, solve, dialogue, end
