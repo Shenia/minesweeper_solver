@@ -11,7 +11,11 @@ from config import SOLVE_BUTTON_IMAGE, RESTART_BUTTON_IMAGE, NEW_BUTTON_IMAGE, P
 from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN
 from solver import solver_one_step, get_adjacent
 
+#TODO: set public/private functions
 #TODO: set game so that no solver or manual could access it after explosion
+#TODO: add number of bombs remaining
+#TODO: add timer
+#TODO: organize field/space display/update for new game/restart/redisplay
 def main():
     # Dialogue Resolution
     dialogue_ratio_height = DIALOGUE_HEIGHT/DIALOGUE_A_HEIGHT
@@ -44,6 +48,7 @@ def main():
     restart_button = Button(restart_button_position, button_size, RESTART_BUTTON_IMAGE)
     new_button = Button(new_button_position, button_size, NEW_BUTTON_IMAGE)
     dialogue = Dialogue(dialogue_position, dialogue_size, dialogue_x_position, dialogue_x_size, dialogue_ok_position, dialogue_ok_size)
+
     # Word test
     # myFont = pygame.font.SysFont("Tahoma", 12)
     # words = myFont.render("You have rolled:", 1, (250, 250, 250))
@@ -83,13 +88,13 @@ def main():
                 # restarting a game
                 elif restart_button.rect.collidepoint(mouse_position):
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
-                    field.restart()
                     mode = "play"
+                    field.restart()
                 # starting a new game
                 elif new_button.rect.collidepoint(mouse_position):
                     solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
-                    field = Field(field_position, field_size, NUMBER_OF_COLS, NUMBER_OF_ROWS, NUMBER_OF_BOMBS, SPACE_SIDE_LENGTH)
                     mode = "play"
+                    field.new_game()
         
         # after resolving all queued events, if in solve mode, run one solve iteration
         if mode == "solve":
@@ -172,7 +177,6 @@ class Dialogue:
         pygame.display.update(self.rect)
         return
     
-# TODO: set public/private functions
 class Button:
     def __init__(self, position, size, image):
         self.position = position
@@ -195,66 +199,61 @@ class Button:
         self.set_button()
         return
 
-# TODO: set public/private functions
 class Field:
     def __init__(self, position, size, num_col, num_row, num_bombs, space_side_length):
         # Field size/location
         self.position = position
         self.size = size
         self.rect = pygame.Rect(self.position, self.size)
-        
-        # Field space properties
         self.space_side_length = space_side_length
+        
+        # Game settings
         self.num_row = num_row
         self.num_col = num_col
         self.num_bombs = num_bombs
-        self.array_of_spaces = [[Space((x, y), self.space_side_length, self) for y in range(self.num_row)] for x in range(self.num_col)]
-        self.redisplay()
         
-        # Game properties
+        # Game properties and display
         self.edited = False
         self.exploded = False
         self.won = False
         self.bombs_set = False
+        self.array_of_spaces = [[Space((x, y), self.space_side_length, self) for y in range(self.num_row)] for x in range(self.num_col)]
+        self.display()
+    
+    def display(self): 
+        pygame.display.update(self.rect)
 
-    def redisplay(self): 
+    #TODO: merge new_game and restart in field and space
+    # New Game
+    def new_game(self):
+        self.exploded = False
+        self.won = False
+        self.edited = False
+        self.bombs_set = False
         for x in range(self.num_col):
             for y in range(self.num_row):
-                self.array_of_spaces[x][y].field_redisplay()
-        pygame.display.update(self.rect)
-                
-    # Accessible by solver
-    def get_field_info(self):
-        return (self.num_row, self.num_col, self.num_bombs, self.bombs_set)
-
-    # Accessible by solver
-    def get_clues(self):
-        clues = []
-        opened = []
-        flagged = []
-        for x, col in enumerate(self.array_of_spaces):
-            for y, space in enumerate(col):
-                if space.opened:
-                    opened.append((x, y))
-                    if space.get_number() != 0:
-                        clues.append(((x, y), space.get_number()))
-                elif space.flagged:
-                    flagged.append((x, y))
-        return clues, opened, flagged
+                self.array_of_spaces[x][y].new_game()
+        self.display()
+        return
 
     # Restart Game
     def restart(self):
         self.exploded = False
         self.won = False
         self.edited = False
-        for col in self.array_of_spaces:
-            for space in col:
-                space.opened = False
-                space.flagged = False
-                space.exploded = False
-                space.set_image(INITIAL_IMAGE)
-        self.redisplay()
+        for x in range(self.num_col):
+            for y in range(self.num_row):
+                self.array_of_spaces[x][y].restart()
+        self.display()
         return
+    
+    # Redisplay from dialogue
+    def redisplay(self):
+        for x in range(self.num_col):
+            for y in range(self.num_row):
+                self.array_of_spaces[x][y].reset_image()
+        self.display()
+        return 
 
     # Open the space at position_x, position_y
     def open(self, position_x, position_y):
@@ -265,7 +264,6 @@ class Field:
             self.plant_bombs(position_x, position_y)
             
         # Open the space at position_x, position_y
-        #TODO: add winning sequence
         self.array_of_spaces[position_x][position_y].open()
         # Determine if game is won
         if self.num_bombs == self.get_unopened() and self.exploded != True:
@@ -285,6 +283,7 @@ class Field:
     # If keep and the space is already flagged, then the space continues to stay flagged
     # Else if not keep and the space is already flagged, then the space is unflagged
     def flag(self, position_x, position_y):
+        self.edited = True
         self.array_of_spaces[position_x][position_y].flag()
 
     # Randomly plant bombs
@@ -312,39 +311,76 @@ class Field:
             self.array_of_spaces[x][y].has_mine = True
         return
 
-# TODO: set public/private functions
+    # Accessible by solver
+    def get_field_info(self):
+        return (self.num_row, self.num_col, self.num_bombs, self.bombs_set)
+
+    # Accessible by solver
+    def get_clues(self):
+        clues = []
+        opened = []
+        flagged = []
+        for x, col in enumerate(self.array_of_spaces):
+            for y, space in enumerate(col):
+                if space.opened:
+                    opened.append((x, y))
+                    if space.get_number() != 0:
+                        clues.append(((x, y), space.get_number()))
+                elif space.flagged:
+                    flagged.append((x, y))
+        return clues, opened, flagged
+
 class Space:
     def __init__(self, index, side_length, field):        
         # Set field
         self.field = field
         
-        # Position and display
+        # Position
         self.index = index
         self.side_length = side_length
+        #TODO: change positions to space pointers
+        self.adjacent_space_positions = get_adjacent(self.index[0], self.index[1], self.field.num_col, self.field.num_row)
         self.position = (self.field.position[0] + self.index[0] * self.side_length, self.field.position[1] + self.index[1] * self.side_length)
         self.rect = pygame.Rect(self.position, (self.side_length, self.side_length))
+
+        # Set new game
+        self.new_game()
+
+    # Reset for new game
+    def new_game(self):
+        # Display
         self.set_image(INITIAL_IMAGE)
-                
         # Game properties
         self.has_mine = False
         self.exploded = False
-        # TODO: change positions to space pointers
-        self.adjacent_space_positions = get_adjacent(self.index[0], self.index[1], self.field.num_col, self.field.num_row)
-
         # Player/solver toggle
         self.opened = False
         self.flagged = False
+        return 
 
-    def field_redisplay(self):
-        gameDisplay.blit(self.image, self.position)
+    # Restart the game
+    def restart(self):
+        # Display
+        self.set_image(INITIAL_IMAGE)
+        # Game properties
+        self.exploded = False
+        # Player/solver toggle
+        self.opened = False
+        self.flagged = False
+        return 
 
-    # Set and display image
+    # Set image
     def set_image(self, image_path):
         self.image = pygame.image.load(image_path)
         self.image = pygame.transform.scale(self.image, (self.side_length, self.side_length))        
-    
-    def display(self):
         gameDisplay.blit(self.image, self.position)
+    
+    # Reset image
+    def reset_image(self):
+        gameDisplay.blit(self.image, self.position)
+    
+    # Display image
+    def display_individual(self):
         pygame.display.update(self.rect)
     
     # Any space can explode
@@ -355,7 +391,7 @@ class Space:
             space.exploded = True
             if space.has_mine:
                 space.set_image(BOMB_IMAGE)
-                space.display()
+                space.display_individual()
                 # pygame.time.wait(50)
             for adjacent_space_position in space.adjacent_space_positions:
                 if space.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].exploded == False and adjacent_space_position not in newQueue:
@@ -379,14 +415,14 @@ class Space:
             num_mines = self.get_number()
             if num_mines == 0:
                 self.set_image(IMAGE_DICTIONARY[0])
-                self.display()
+                self.display_individual()
                 for adjacent_space_position in self.adjacent_space_positions:
                     if self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].opened == False and self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].has_mine == False:
                         self.field.array_of_spaces[adjacent_space_position[0]][adjacent_space_position[1]].open()
                 return 
             elif num_mines >= 1 and num_mines <= 8:
                 self.set_image(IMAGE_DICTIONARY[num_mines])
-                self.display()
+                self.display_individual()
                 return   
     
     # Flag space, accessed through field. 
@@ -398,12 +434,12 @@ class Space:
         elif self.flagged:
             self.flagged = False
             self.set_image(INITIAL_IMAGE)
-            self.display()
+            self.display_individual()
             return
         else:
             self.flagged = True
             self.set_image(FLAGGED_IMAGE)
-            self.display()
+            self.display_individual()
             return
 
     # Get the number of mines in adjacent spaces

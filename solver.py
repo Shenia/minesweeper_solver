@@ -1,9 +1,9 @@
 import pygame
 DEFAULT_OPEN_SPACE = (2, 3)
 
-# TODO: add clues exhausted sequence
-# TODO: optimize space/time
-# TODO: finish commenting
+#TODO: optimize space/time
+#TODO: set public/private functions
+#TODO: finish commenting
 def solver_one_step(field):
     # Get clues from field
     (num_row, num_col, num_bombs, started) = field.get_field_info()
@@ -53,7 +53,6 @@ def solver_one_step(field):
     mapping.open(field, DEFAULT_OPEN_SPACE)
     return
 
-# TODO: set public/private functions
 class Mapping:
     def __init__(self, ncol, nrow, nbombs, started):
         self.field = [[MappingSpace(x, y, get_adjacent(x, y, ncol, nrow)) for y in range(nrow)] for x in range(ncol)]
@@ -224,7 +223,6 @@ class Mapping:
         space.num_unknown_spaces = num_unknown_spaces
         return
 
-# TODO: set public/private functions
 # The smallest of clues
 class Link:
     def __init__(self, num_bombs, spaces):
@@ -232,7 +230,6 @@ class Link:
         self.spaces = spaces
         self.delete = False
 
-# TODO: set public/private functions
 # Spaces on the abstract player map
 class MappingSpace:
     def __init__(self, x, y, adjacent_positions):

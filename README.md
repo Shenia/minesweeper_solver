@@ -16,9 +16,9 @@ Todos:
 6. set public/private functions for each class
 7. change position tuples to space pointers in functions
 8. rewrite explosion function
-9. add winning notification
-10. add losing notification
-11. add clues exhausted notification/terminate solver function
+9. add winning notification (done)
+10. add losing notification (done)
+11. add clues exhausted notification/terminate solver function (done)
 12. check for consistencies in class/functions structures
 13. delete print statements
 14. write a better README
