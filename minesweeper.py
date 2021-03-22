@@ -11,6 +11,7 @@ from config import SOLVE_BUTTON_IMAGE, RESTART_BUTTON_IMAGE, NEW_BUTTON_IMAGE, P
 from config import BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_FIELD_MARGIN
 from solver import solver_one_step, get_adjacent
 
+#TODO: set game so that no solver or manual could access it after explosion
 def main():
     # Dialogue Resolution
     dialogue_ratio_height = DIALOGUE_HEIGHT/DIALOGUE_A_HEIGHT
@@ -43,6 +44,11 @@ def main():
     restart_button = Button(restart_button_position, button_size, RESTART_BUTTON_IMAGE)
     new_button = Button(new_button_position, button_size, NEW_BUTTON_IMAGE)
     dialogue = Dialogue(dialogue_position, dialogue_size, dialogue_x_position, dialogue_x_size, dialogue_ok_position, dialogue_ok_size)
+    # Word test
+    # myFont = pygame.font.SysFont("Tahoma", 12)
+    # words = myFont.render("You have rolled:", 1, (250, 250, 250))
+    # gameDisplay.blit(words, (0, 0))
+    # pygame.display.flip()
 
     # Check Collision
     # gameDisplay.fill(BACKGROUND_COLOUR, rect=dialogue.ok_rect)
