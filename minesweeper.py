@@ -16,6 +16,9 @@ from solver import solver_one_step, get_adjacent
 #TODO: add number of bombs remaining
 #TODO: add timer
 #TODO: organize field/space display/update for new game/restart/redisplay
+#TODO: stop solver when buttons are clicked
+#TODO: solve with comparing multiple links/multiple passes
+#TODO: set min number of bombs
 def main():
     # Dialogue Resolution
     dialogue_ratio_height = DIALOGUE_HEIGHT/DIALOGUE_A_HEIGHT
@@ -28,8 +31,7 @@ def main():
     # Window Setup
     pygame.init()
     global gameDisplay
-    screen_size = screen_dimensions(NUMBER_OF_COLS, NUMBER_OF_ROWS, SPACE_SIDE_LENGTH, MARGIN, BUTTON_HEIGHT, BUTTON_FIELD_MARGIN)
-    field_position = (MARGIN, MARGIN)
+    (screen_size, field_position) = screen_dimensions(NUMBER_OF_COLS, NUMBER_OF_ROWS, SPACE_SIDE_LENGTH, MARGIN, BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_FIELD_MARGIN)
     field_size = (NUMBER_OF_COLS * SPACE_SIDE_LENGTH, NUMBER_OF_ROWS * SPACE_SIDE_LENGTH)
     space_size = (SPACE_SIDE_LENGTH, SPACE_SIDE_LENGTH)
     button_size = (BUTTON_WIDTH, BUTTON_HEIGHT)
@@ -40,6 +42,7 @@ def main():
     dialogue_position = (((field_size[0] - dialogue_size[0]) / 2) + field_position[0], ((field_size[1] - dialogue_size[1]) / 2) + field_position[1])
     gameDisplay = pygame.display.set_mode(screen_size)
     gameDisplay.fill(BACKGROUND_COLOUR)
+    pygame.display.flip()
     pygame.display.set_caption("Minesweeper")
     
     # Object Setup
@@ -114,7 +117,7 @@ def main():
                         elif event.type == pygame.MOUSEBUTTONUP:
                             mouse_position = pygame.mouse.get_pos()
                             if dialogue.x_rect.collidepoint(mouse_position) or dialogue.ok_rect.collidepoint(mouse_position):
-                                field.redisplay()
+                                all_redisplay(field, solve_button, restart_button, new_button)
                                 mode = "play"
                                 solve_button.set_button_img(SOLVE_BUTTON_IMAGE)
             
@@ -137,14 +140,29 @@ def main():
                         if dialogue.x_rect.collidepoint(mouse_position) or dialogue.ok_rect.collidepoint(mouse_position):
                             mode = "end"
                             solve_button.set_button_img(DISABLED_BUTTON_IMAGE)
-                            field.redisplay()
+                            all_redisplay(field, solve_button, restart_button, new_button)
 
 # Calculate screen dimensions
 # Set to have one row of buttons side-by-side, assume field width is longer than the sum of all buttons' widths
-def screen_dimensions(ncol, nrow, space_side_length, margin, button_height, button_field_margin):
-    screen_width = ncol * space_side_length + 2 * margin
+def screen_dimensions(ncol, nrow, space_side_length, margin, button_width, button_height, button_field_margin):
+    if (ncol * space_side_length + margin * 2 > button_width * 3 + margin * 2 + 10 * 2):
+        screen_width = ncol * space_side_length + margin * 2
+        field_x = margin
+    else:
+        screen_width = button_width * 3 + margin * 2 + 10 * 2
+        field_x = (screen_width - NUMBER_OF_COLS * SPACE_SIDE_LENGTH) // 2
     screen_height = nrow * space_side_length + 2 * margin + button_height + button_field_margin
-    return (screen_width, screen_height)
+    field_position = (field_x, margin)
+    return ((screen_width, screen_height), field_position)
+
+def all_redisplay(field, button_1, button_2, button_3):
+    gameDisplay.fill(BACKGROUND_COLOUR)
+    field.redisplay()
+    button_1.set_button()
+    button_2.set_button()
+    button_3.set_button()
+    pygame.display.flip()
+    return 
 
 def manual(field, mouse_position, event_button):
     position_x = (mouse_position[0] - field.position[0]) // field.space_side_length
@@ -181,10 +199,8 @@ class Button:
     def __init__(self, position, size, image):
         self.position = position
         self.size = size
-        self.image = pygame.image.load(image)
-        self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect(self.position, self.size)
-        self.set_button()
+        self.set_button_img(image)
     
     # Set and display button image
     def set_button(self):

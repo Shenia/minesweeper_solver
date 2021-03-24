@@ -1,5 +1,5 @@
 import pygame
-DEFAULT_OPEN_SPACE = (2, 3)
+from config import DEFAULT_OPEN_SPACE
 
 #TODO: optimize space/time
 #TODO: set public/private functions
