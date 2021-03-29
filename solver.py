@@ -4,6 +4,7 @@ from config import DEFAULT_OPEN_SPACE
 #TODO: optimize space/time
 #TODO: set public/private functions
 #TODO: finish commenting
+#TODO: modify get adjacent function
 def solver_one_step(field):
     # Get clues from field
     (num_row, num_col, num_bombs, started) = field.get_field_info()
@@ -249,55 +250,10 @@ class MappingSpace:
 # Given the dimensions of a 2D array and the position in the array, return an array of horizontally, vertically, diagonally adjacent spaces
 def get_adjacent(position_x, position_y, num_col, num_row):
     check = []
-    if position_x == 0:
-        if position_y == 0:
-            check.append((0, 1))
-            check.append((1, 1))
-            check.append((1, 0))
-        elif position_y == num_row - 1:
-            check.append((position_x, position_y-1))
-            check.append((position_x+1, position_y-1))
-            check.append((position_x+1, position_y))
-        else:
-            check.append((position_x, position_y-1))
-            check.append((position_x, position_y+1))
-            check.append((position_x+1, position_y-1))
-            check.append((position_x+1, position_y))
-            check.append((position_x+1, position_y+1))
-    elif position_x == num_col - 1:
-        if position_y == 0:
-            check.append((position_x, 1))
-            check.append((position_x-1, 0))
-            check.append((position_x-1, 1))
-        elif position_y == num_row - 1:
-            check.append((position_x-1, position_y))
-            check.append((position_x-1, position_y-1))
-            check.append((position_x, position_y-1))
-        else:
-            check.append((position_x, position_y-1))
-            check.append((position_x, position_y+1))
-            check.append((position_x-1, position_y-1))
-            check.append((position_x-1, position_y))
-            check.append((position_x-1, position_y+1))
-    elif position_y == 0:
-        check.append((position_x-1, position_y))
-        check.append((position_x+1, position_y))
-        check.append((position_x-1, position_y+1))
-        check.append((position_x, position_y+1))
-        check.append((position_x+1, position_y+1))
-    elif position_y == num_row - 1:
-        check.append((position_x-1, position_y))
-        check.append((position_x+1, position_y))
-        check.append((position_x-1, position_y-1))
-        check.append((position_x, position_y-1))
-        check.append((position_x+1, position_y-1))
-    else: 
-        check.append((position_x-1, position_y-1))
-        check.append((position_x-1, position_y))
-        check.append((position_x-1, position_y+1))
-        check.append((position_x, position_y-1))
-        check.append((position_x, position_y+1))
-        check.append((position_x+1, position_y-1))
-        check.append((position_x+1, position_y))
-        check.append((position_x+1, position_y+1))
+    for x in range(position_x - 1, position_x + 2):
+        for y in range (position_y - 1, position_y + 2):
+            if (x == position_x and y == position_y) or x < 0 or x >= num_col or y < 0 or y >= num_row:
+                continue
+            else:
+                check.append((x, y))
     return check

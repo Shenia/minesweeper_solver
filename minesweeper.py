@@ -312,7 +312,7 @@ class Field:
             space_list.append(i)
         
         # The numbers representing bomb_free spaces are removed from space_list so that bombs won't be planted there
-        bomb_free_spaces = get_adjacent(position_x, position_y, self.num_col, self.num_row)
+        bomb_free_spaces = self.array_of_spaces[position_x][position_y].adjacent_space_positions
         bomb_free_spaces.append((position_x, position_y))
         for position in bomb_free_spaces:
             num = position[1] * self.num_col + position[0]
