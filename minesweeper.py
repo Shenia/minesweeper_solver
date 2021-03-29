@@ -308,22 +308,20 @@ class Field:
         # Each space in the field is assigned a number determined by their position. Space at position (x, y) is assigned x*ncol+y
         # The number is placed into space_list, where random positions to plant bombs are drawn from
         space_list = []
-        for i in range(self.num_col * self.num_row):
-            space_list.append(i)
+        for x in range(self.num_col):
+            for y in range(self.num_row):
+                space_list.append((x, y))
         
         # The numbers representing bomb_free spaces are removed from space_list so that bombs won't be planted there
         for position in self.array_of_spaces[position_x][position_y].adjacent_space_positions:
-            num = position[1] * self.num_col + position[0]
-            space_list.remove(num)
-        space_list.remove(position_y * self.num_col + position_x)
+            space_list.remove(position)
+        space_list.remove((position_x, position_y))
         
         # Positions are drawn randomly from space_list and removed. Bombs will be planted in drawn positions.
         for n in range(self.num_bombs):
             random_index = random.randint(0, len(space_list) - 1)
-            random_number = space_list.pop(random_index) 
-            x = random_number % self.num_col
-            y = random_number // self.num_col
-            self.array_of_spaces[x][y].has_mine = True
+            random_position = space_list.pop(random_index) 
+            self.array_of_spaces[random_position[0]][random_position[1]].has_mine = True
         return
 
     # Accessible by solver
