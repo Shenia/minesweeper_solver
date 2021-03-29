@@ -32,10 +32,10 @@ DIALOGUE_X_Y = 8
 DIALOGUE_X_HEIGHT = 55
 DIALOGUE_X_WIDTH = 55
 
-# at least one of row or column has to have at least 4 cells, the other at least 1
-NUMBER_OF_ROWS = 4
+# at least one of row or column has to have at least 4 cells, the other at least 2
+NUMBER_OF_ROWS = 3
 NUMBER_OF_COLS = 4
 # max = area - min(NUMBER_OF_ROWS, NUMBER_OF_COLS, 3) * 3
 # min = ??(max recursion depth exceeded error)
-NUMBER_OF_BOMBS = 7
-DEFAULT_OPEN_SPACE = (0, 0)
+NUMBER_OF_BOMBS = 3
+DEFAULT_OPEN_SPACE = (1, 1)

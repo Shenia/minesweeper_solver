@@ -312,11 +312,10 @@ class Field:
             space_list.append(i)
         
         # The numbers representing bomb_free spaces are removed from space_list so that bombs won't be planted there
-        bomb_free_spaces = self.array_of_spaces[position_x][position_y].adjacent_space_positions
-        bomb_free_spaces.append((position_x, position_y))
-        for position in bomb_free_spaces:
+        for position in self.array_of_spaces[position_x][position_y].adjacent_space_positions:
             num = position[1] * self.num_col + position[0]
             space_list.remove(num)
+        space_list.remove(position_y * self.num_col + position_x)
         
         # Positions are drawn randomly from space_list and removed. Bombs will be planted in drawn positions.
         for n in range(self.num_bombs):
